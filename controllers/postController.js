@@ -145,21 +145,31 @@ const deleteStory = async (req, res) => {
 const deleteComment = async (req, res) => {
   try {
     const { postId, commentId } = req.params;
-    const post = await Post.findById(postId);
+    const userId = req.user.userId;
+
+    const post = await Post.findOneAndUpdate(
+      {
+        _id: postId,
+        "comments._id": commentId,
+        "comments.user": userId, // ownership check
+      },
+      {
+        $pull: { comments: { _id: commentId } },
+        $inc: { commentCount: -1 },
+      },
+      { new: true }
+    );
+
     if (!post) {
-      return response(res, 404, "Controller me post not found");
+      return response(res, 404, "Post or comment not found / unauthorized");
     }
-    const comment = post.comments.id(commentId);
-    if (!comment) {
-      return response(res, 404, "Controller me comment nai mila");
+
+    // Safety clamp
+    if (post.commentCount < 0) {
+      post.commentCount = 0;
+      await post.save();
     }
-    if (comment.user.toString() !== req.user.userId) {
-      return response(res, 403, "Unauthorized: You do not own this comment");
-    }
-    comment.deleteOne();
-    post.commentCount = post.comments.length;
-    post.commentCount = Math.max(0, post.commentCount - 1);
-    await post.save();
+
     return response(res, 200, "Comment deleted successfully");
   } catch (error) {
     console.error("Error deleting comment:", error);

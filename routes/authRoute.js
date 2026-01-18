@@ -7,15 +7,17 @@ const {
   logout,
   forgotPassword,
   resetPassword,
+  getMe,
 } = require("../controllers/authController");
 const passport = require("passport");
 const { generateToken } = require("../utils/generateToken");
 const router = express.Router();
+router.get("/me", authMiddleware, getMe);
 
 router.post(
   "/register",
   multerMiddleware.single("profilePicture"),
-  registerUser
+  registerUser,
 );
 router.post("/login", loginUser);
 router.get("/logout", logout);
@@ -28,7 +30,7 @@ router.get(
   "/google",
   passport.authenticate("google", {
     scope: ["profile", "email "],
-  })
+  }),
 );
 
 //google callback routes
@@ -46,7 +48,7 @@ router.get(
       secure: true,
     });
     res.redirect(`${process.env.FRONTEND_URL}`);
-  }
+  },
 );
 
 module.exports = router;

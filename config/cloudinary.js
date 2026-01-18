@@ -8,34 +8,23 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-/**
- * 1️⃣ Multer with safe size limit (5MB)
- */
 const multerMiddleware = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB
+    fileSize: 5 * 1024 * 1024, // 5 MB limit
   },
 });
 
 const uploadFileToCloudinary = (file) => {
   const isVideo = file.mimetype.startsWith("video");
-  const resourceType = isVideo ? "video" : "image";
 
   return new Promise((resolve, reject) => {
     cloudinary.uploader
       .upload_stream(
         {
-          resource_type: resourceType,
-
-          // 🔹 IMAGE COMPRESSION (only for images)
-          ...(!isVideo && {
-            quality: "auto", // auto compression
-            fetch_format: "auto", // webp / optimized format
-          }),
-
-          // Optional but recommended
-          timeout: 120000, // 2 minutes
+          resource_type: isVideo ? "video" : "image",
+          folder: "app_uploads",
+          timeout: 120000,
         },
         (error, result) => {
           if (error) return reject(error);
@@ -46,9 +35,6 @@ const uploadFileToCloudinary = (file) => {
   });
 };
 
-/**
- * ✅ CENTRAL DELETE FUNCTION (IMAGE / VIDEO)
- */
 const deleteFileFromCloudinary = async ({ publicId, resourceType }) => {
   if (!publicId) return;
 
@@ -57,9 +43,6 @@ const deleteFileFromCloudinary = async ({ publicId, resourceType }) => {
   });
 };
 
-/**
- * ✅ DELETE MULTIPLE FILES (array-safe)
- */
 const deleteMultipleFromCloudinary = async (files = []) => {
   if (!Array.isArray(files)) return;
 

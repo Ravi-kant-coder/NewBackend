@@ -25,6 +25,7 @@ const {
 } = require("./controllers/messageController");
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -57,9 +58,6 @@ app.use("/students", authMiddleware, schoolRoute);
 app.use("/messages", authMiddleware, messageRoute);
 app.use("/youtube", authMiddleware, youTubeSyncRoute);
 app.use("/", require("./routes/videos"));
-
-// Auth routes stay open (for login/signup)
-app.use("/auth", authRoute);
 
 // ----------Yahan se Create HTTP + socket code shuru hota hai----------
 
@@ -139,5 +137,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 8000;
 server.listen(PORT, () =>
-  console.log(`MongoDB connected and Server listening on ${PORT}`)
+  console.log(`MongoDB connected and Server listening on ${PORT}`),
 );

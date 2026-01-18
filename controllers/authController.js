@@ -97,6 +97,7 @@ const registerUser = async (req, res) => {
       httpOnly: true,
       sameSite: "none",
       secure: true,
+      maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
     });
 
     return response(res, 201, "Account created successfully", {
@@ -131,6 +132,7 @@ const loginUser = async (req, res) => {
       httpOnly: true,
       sameSite: "none",
       secure: true,
+      maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days
     });
 
     return response(res, 201, "Logged in successfully", {
@@ -211,10 +213,28 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select(
+      "username email profilePicture",
+    );
+
+    if (!user) {
+      return response(res, 404, "User not found");
+    }
+
+    return response(res, 200, "User fetched successfully", user);
+  } catch (error) {
+    console.error(error);
+    return response(res, 500, "Internal Server Error", error.message);
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   logout,
   forgotPassword,
   resetPassword,
+  getMe,
 };

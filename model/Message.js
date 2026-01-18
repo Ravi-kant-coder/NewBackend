@@ -14,7 +14,7 @@ const messageSchema = new mongoose.Schema(
     },
     text: { type: String, default: "" },
     editedAt: { type: Date, default: null },
-    deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // hard-hide for specific users
+    deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
