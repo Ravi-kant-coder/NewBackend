@@ -11,26 +11,58 @@ cloudinary.config({
 const multerMiddleware = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5 MB limit
+    fileSize: 50 * 1024 * 1024, // allow bigger videos/audio
   },
 });
 
 const uploadFileToCloudinary = (file) => {
+  const isImage = file.mimetype.startsWith("image");
+  const isAudio =
+    file.mimetype.startsWith("audio") ||
+    file.mimetype.includes("ogg") ||
+    file.mimetype.includes("wma");
   const isVideo = file.mimetype.startsWith("video");
+
+  let uploadOptions = {
+    folder: "app_uploads",
+    timeout: 180000,
+  };
+
+  /* ================= IMAGE ================= */
+  if (isImage) {
+    uploadOptions.resource_type = "image";
+    uploadOptions.transformation = [
+      { width: 720, crop: "limit" }, // 🔥 fixed to 720
+      { quality: 75 },
+      { fetch_format: "auto" },
+    ];
+  } else if (isAudio) {
+    /* ================= AUDIO ================= */
+    uploadOptions.resource_type = "video"; // Cloudinary audio rule
+
+    uploadOptions.transformation = [
+      { audio_codec: "aac" },
+      { bit_rate: "96k" }, // 🔥 standard bitrate
+      { audio_frequency: 44100 },
+      { format: "mp3" }, // 🔥 FORCE MP3 OUTPUT
+    ];
+  } else if (isVideo) {
+    /* ================= VIDEO ================= */
+    uploadOptions.resource_type = "video";
+
+    uploadOptions.transformation = [
+      { width: 1280, crop: "limit" }, // safe resize
+      { quality: "auto" }, // smart compression
+      { fetch_format: "auto" },
+    ];
+  }
 
   return new Promise((resolve, reject) => {
     cloudinary.uploader
-      .upload_stream(
-        {
-          resource_type: isVideo ? "video" : "image",
-          folder: "app_uploads",
-          timeout: 120000,
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        }
-      )
+      .upload_stream(uploadOptions, (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      })
       .end(file.buffer);
   });
 };

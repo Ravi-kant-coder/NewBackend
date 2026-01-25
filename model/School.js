@@ -25,9 +25,18 @@ const schoolSchema = new mongoose.Schema(
       validate: [
         {
           validator: function (v) {
-            return v.length <= 4;
+            return (
+              Array.isArray(v) &&
+              v.length <= 4 &&
+              v.every(
+                (item) =>
+                  item.publicId &&
+                  item.url &&
+                  ["image", "video"].includes(item.type),
+              )
+            );
           },
-          message: "You can upload a maximum of 4 photos or videos.",
+          message: "You can upload a maximum of 4 valid media files.",
         },
       ],
       default: [],
@@ -69,7 +78,7 @@ const schoolSchema = new mongoose.Schema(
       minlength: 10,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const School = mongoose.model("School", schoolSchema);
