@@ -1,5 +1,6 @@
 const {
   uploadFileToCloudinary,
+  deleteMultipleFromCloudinary,
   deleteFileFromCloudinary,
 } = require("../config/cloudinary");
 const Post = require("../model/Post");
@@ -8,34 +9,32 @@ const response = require("../utils/responceHandler");
 
 const createPost = async (req, res) => {
   try {
+    const uploadedMedia = [];
+    if (req.files?.length) {
+      if (req.files.length > 4) {
+        return res.status(400).json({
+          message: "Maximum 4 files allowed",
+        });
+      }
+      if (req.files) {
+        for (const file of req.files || []) {
+          const result = await uploadFileToCloudinary(file);
+          uploadedMedia.push({
+            url: result.secure_url,
+            publicId: result.public_id,
+            type: file.mimetype.startsWith("video") ? "video" : "image",
+          });
+        }
+      }
+    }
     const userId = req.user.userId;
     const { content } = req.body;
-    const file = req.file;
-    let mediaUrl = null;
-    let mediaType = null;
 
-    if (file) {
-      const uploadResult = await uploadFileToCloudinary(file);
-      mediaUrl = uploadResult?.secure_url;
-      mediaType = file.mimetype.startsWith("video") ? "video" : "image";
-    }
-    if (!content && !mediaUrl) {
-      return response(
-        res,
-        400,
-        "Content or media is required to create a post"
-      );
-    }
-    const newPost = new Post({
+    const newPost = await Post.create({
       user: userId,
       content,
-      mediaUrl,
-      mediaType,
-      likeCount: 0,
-      commentCount: 0,
-      shareCount: 0,
+      uploadedMedia,
     });
-    await newPost.save();
     return response(res, 201, "Post created successfully", newPost);
   } catch (error) {
     console.log("error creating post", error);
@@ -44,11 +43,10 @@ const createPost = async (req, res) => {
 };
 
 const updatePostContent = async (req, res) => {
-  console.log("PATCH /users/posts/:postId/content mil gaya", req.params.postId);
   try {
     const post = await Post.findById(req.params.postId);
     if (!post) {
-      return response(res, 404, "Post nahi mili");
+      return response(res, 404, "Post not found");
     }
     if (post.user.toString() !== req.user.userId) {
       return response(res, 403, "You do not own this post");
@@ -86,30 +84,38 @@ const updateComment = async (req, res) => {
 
 const deletePost = async (req, res) => {
   try {
-    const post = await Post.findOneAndDelete({
+    const post = await Post.findOne({
       _id: req.params.id,
       user: req.user.userId,
     });
-    if (!post) {
-      return response(res, 404, "Post not found or not authorized");
-    }
-    if (post.mediaUrl) {
-      try {
-        const parts = post.mediaUrl.split("/");
-        const filename = parts[parts.length - 1];
-        const publicId = filename?.split(".")[0];
 
-        if (publicId) {
-          await deleteFileFromCloudinary(publicId);
-        }
-      } catch (cloudErr) {
-        console.error("Cloudinary post media deletion failed:", cloudErr);
+    if (!post) {
+      return res.status(404).json({
+        success: false,
+        message: "Post not found or not authorized",
+      });
+    }
+    if (Array.isArray(post.uploadedMedia) && post.uploadedMedia.length > 0) {
+      try {
+        await deleteMultipleFromCloudinary(post.uploadedMedia);
+      } catch (err) {
+        console.error("Cloudinary deletion failed:", err);
       }
     }
-    return response(res, 200, "Post deleted successfully");
+
+    await post.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: "Post deleted successfully",
+    });
   } catch (error) {
-    console.error("Error deleting post:", error);
-    return response(res, 500, error.message || "Something went wrong");
+    console.error("Error deleting Post in controller:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete Post",
+      error: error.message,
+    });
   }
 };
 
@@ -157,7 +163,7 @@ const deleteComment = async (req, res) => {
         $pull: { comments: { _id: commentId } },
         $inc: { commentCount: -1 },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!post) {
@@ -260,32 +266,33 @@ const getPostByUserId = async (req, res) => {
 const likePost = async (req, res) => {
   const { postId } = req.params;
   const userId = req.user.userId;
+
   try {
-    const post = await Post.findById(postId);
-    if (!post) {
-      return response(res, 404, "post not found");
-    }
-    const hasLiked = post.likes.includes(userId);
-    if (hasLiked) {
-      post.likes = post.likes.filter(
-        (id) => id.toString() !== userId.toString()
-      );
-      post.likeCount = Math.max(0, post.likeCount - 1);
-    } else {
-      post.likes.push(userId);
-      post.likeCount += 1;
+    const updatedPost = await Post.findOneAndUpdate(
+      {
+        _id: postId,
+        likes: { $ne: userId }, // only if not already liked
+      },
+      {
+        $addToSet: { likes: userId },
+        $inc: { likeCount: 1 },
+      },
+      { new: true },
+    );
+
+    // If null → either post not found OR already liked
+    if (!updatedPost) {
+      const exists = await Post.exists({ _id: postId });
+      if (!exists) {
+        return response(res, 404, "Post not found");
+      }
+
+      return response(res, 200, "Post already liked");
     }
 
-    //save the like in updated post
-    const updatedpost = await post.save();
-    return response(
-      res,
-      201,
-      hasLiked ? "Post cant be liked again" : "post liked successfully",
-      updatedpost
-    );
+    return response(res, 200, "Post liked successfully", updatedPost);
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return response(res, 500, "Internal server error", error.message);
   }
 };

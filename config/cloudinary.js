@@ -67,22 +67,29 @@ const uploadFileToCloudinary = (file) => {
   });
 };
 
-const deleteFileFromCloudinary = async ({ publicId, resourceType }) => {
+const deleteFileFromCloudinary = async ({ publicId, type }) => {
   if (!publicId) return;
 
+  const resourceType = type === "video" ? "video" : "image";
+
   return cloudinary.uploader.destroy(publicId, {
-    resource_type: resourceType || "image",
+    resource_type: resourceType,
   });
 };
 
 const deleteMultipleFromCloudinary = async (files = []) => {
   if (!Array.isArray(files)) return;
 
-  for (const file of files) {
-    if (file?.publicId) {
-      await deleteFileFromCloudinary(file);
-    }
-  }
+  await Promise.all(
+    files.map((file) =>
+      file?.publicId
+        ? deleteFileFromCloudinary({
+            publicId: file.publicId,
+            type: file.type,
+          })
+        : null,
+    ),
+  );
 };
 
 module.exports = {

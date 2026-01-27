@@ -13,7 +13,6 @@ const schoolSchema = new mongoose.Schema(
       required: true,
     },
 
-    // 🔽 Media: up to 4 images or videos
     uploadedMedia: {
       type: [
         {

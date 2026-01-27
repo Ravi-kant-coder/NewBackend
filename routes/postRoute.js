@@ -19,12 +19,11 @@ const {
 
 const router = express.Router();
 
-//create post
 router.post(
   "/posts",
   authMiddleware,
-  multerMiddleware.single("media"),
-  createPost
+  multerMiddleware.array("media", 4),
+  createPost,
 );
 
 router.patch("/posts/:postId/content", authMiddleware, updatePostContent);
@@ -32,7 +31,7 @@ router.patch("/posts/:postId/content", authMiddleware, updatePostContent);
 router.patch(
   "/posts/:postId/comments/:commentId/text",
   authMiddleware,
-  updateComment
+  updateComment,
 );
 
 //delete post
@@ -42,7 +41,7 @@ router.delete("/posts/:id", authMiddleware, deletePost);
 router.delete(
   "/posts/:postId/comments/:commentId",
   authMiddleware,
-  deleteComment
+  deleteComment,
 );
 
 //delete story
@@ -68,7 +67,7 @@ router.post(
   "/story",
   authMiddleware,
   multerMiddleware.single("media"),
-  createStory
+  createStory,
 );
 
 //get all story

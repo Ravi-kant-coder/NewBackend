@@ -14,7 +14,7 @@ router.post(
   "/schools",
   authMiddleware,
   multerMiddleware.array("media", 4),
-  createSchool
+  createSchool,
 );
 router.get("/schools", authMiddleware, getAllSchools);
 router.delete("/schools/:id", authMiddleware, deleteSchool);

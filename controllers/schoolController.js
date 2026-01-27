@@ -1,6 +1,5 @@
 const {
   uploadFileToCloudinary,
-  deleteFileFromCloudinary,
   deleteMultipleFromCloudinary,
 } = require("../config/cloudinary");
 const School = require("../model/School");
@@ -38,7 +37,6 @@ const createSchool = async (req, res) => {
       schoolDescription,
     } = req.body;
 
-    // Creating a new school with the logged-in user as owner
     const school = await School.create({
       user: userId,
       schoolName,
@@ -79,7 +77,6 @@ const deleteSchool = async (req, res) => {
         message: "School not found or not authorized",
       });
     }
-    // 2️⃣ DELETE Cloudinary media FIRST
     if (
       Array.isArray(school.uploadedMedia) &&
       school.uploadedMedia.length > 0
@@ -91,7 +88,6 @@ const deleteSchool = async (req, res) => {
       }
     }
 
-    // 3️⃣ DELETE MongoDB document LAST
     await school.deleteOne();
 
     return res.status(200).json({
