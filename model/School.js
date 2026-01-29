@@ -67,7 +67,7 @@ const schoolSchema = new mongoose.Schema(
 
     mobile: {
       type: String,
-      required: true,
+      default: null,
     },
 
     schoolDescription: {

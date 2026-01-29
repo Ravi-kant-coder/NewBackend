@@ -5,8 +5,12 @@ const {
 const School = require("../model/School");
 const response = require("../utils/responceHandler");
 
+const normalizeNullableString = (value) =>
+  value === undefined || value === "null" || value === "" ? null : value;
+
 const createSchool = async (req, res) => {
   try {
+    const userId = req.user.userId;
     const uploadedMedia = [];
     if (req.files?.length) {
       if (req.files.length > 4) {
@@ -14,18 +18,20 @@ const createSchool = async (req, res) => {
           message: "Maximum 4 files allowed",
         });
       }
-      if (req.files) {
-        for (const file of req.files || []) {
-          const result = await uploadFileToCloudinary(file);
-          uploadedMedia.push({
-            url: result.secure_url,
-            publicId: result.public_id,
-            type: file.mimetype.startsWith("video") ? "video" : "image",
-          });
-        }
+      for (const file of req.files || []) {
+        const result = await uploadFileToCloudinary(file);
+        uploadedMedia.push({
+          url: result.secure_url,
+          publicId: result.public_id,
+          type: file.mimetype.startsWith("video") ? "video" : "image",
+        });
       }
     }
-    const userId = req.user.userId;
+
+    ["mobile", "homepage", "email"].forEach((key) => {
+      req.body[key] = normalizeNullableString(req.body[key]);
+    });
+
     const {
       schoolName,
       intakes,

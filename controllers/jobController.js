@@ -5,6 +5,9 @@ const {
 const Job = require("../model/Job");
 const response = require("../utils/responceHandler");
 
+const normalizeNullableString = (value) =>
+  value === undefined || value === "null" || value === "" ? null : value;
+
 const createJob = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -17,6 +20,11 @@ const createJob = async (req, res) => {
       mediaUrl = uploadResult?.secure_url;
       mediaType = file.mimetype.startsWith("video") ? "video" : "image";
     }
+
+    ["mobile", "homepage", "email"].forEach((key) => {
+      req.body[key] = normalizeNullableString(req.body[key]);
+    });
+
     const {
       company,
       title,
@@ -25,6 +33,7 @@ const createJob = async (req, res) => {
       salary,
       email,
       mobile,
+      homepage,
       jobDescription,
     } = req.body;
 
@@ -40,6 +49,7 @@ const createJob = async (req, res) => {
       salary,
       email,
       mobile,
+      homepage,
       jobDescription,
     });
     return res.status(201).json({
@@ -111,31 +121,11 @@ const getAllJobs = async (req, res) => {
   }
 };
 
-const updatePostContent = async (req, res) => {
-  console.log("PATCH /users/posts/:postId/content mil gaya", req.params.postId);
-  try {
-    const post = await Post.findById(req.params.postId);
-    if (!post) {
-      return response(res, 404, "Post nahi mili");
-    }
-    if (post.user.toString() !== req.user.userId) {
-      return response(res, 403, "You do not own this post");
-    }
-    post.content = req.body.content || post.content;
-    await post.save();
-    return response(res, 200, "Post content updated", post);
-  } catch (error) {
-    console.error("Error updating post content in controller:", error);
-    return response(res, 500, "Something went wrong in controller");
-  }
-};
 const updateJob = async (req, res) => {
-  console.log("Controller me jobId ye hai:", req.params.id);
-  console.log("Controller me NewlyEdited Object:", req.body.content);
   try {
     const job = await Job.findById(req.params.id);
     if (!job) {
-      return response(res, 404, "Job nahi mili");
+      return response(res, 404, "Job Not Found");
     }
     if (job.user.toString() !== req.user.userId) {
       return response(res, 403, "You do not own this job post");
@@ -144,8 +134,6 @@ const updateJob = async (req, res) => {
     job.requirements = req.body.content.requirements || job.requirements;
     job.location = req.body.content.location || job.location;
     job.salary = req.body.content.salary || job.salary;
-    job.email = req.body.content.email || job.email;
-    job.mobile = req.body.content.mobile || job.mobile;
     job.jobDescription = req.body.content.jobDescription || job.jobDescription;
     await job.save();
     return response(res, 200, "Job post updated", job);

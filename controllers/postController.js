@@ -150,6 +150,9 @@ const deleteStory = async (req, res) => {
 
 const deleteComment = async (req, res) => {
   try {
+    if (!req.user?.userId) {
+      return response(res, 401, "Unauthorized");
+    }
     const { postId, commentId } = req.params;
     const userId = req.user.userId;
 
@@ -170,7 +173,6 @@ const deleteComment = async (req, res) => {
       return response(res, 404, "Post or comment not found / unauthorized");
     }
 
-    // Safety clamp
     if (post.commentCount < 0) {
       post.commentCount = 0;
       await post.save();
