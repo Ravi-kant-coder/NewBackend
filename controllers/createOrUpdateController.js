@@ -1,4 +1,7 @@
-const { uploadFileToCloudinary } = require("../config/cloudinary");
+const {
+  uploadFileToCloudinary,
+  deleteFileFromCloudinary,
+} = require("../config/cloudinary");
 const User = require("../model/User");
 const Bio = require("../model/UserBio");
 const response = require("../utils/responceHandler");
@@ -32,7 +35,7 @@ const createOrUpdateUserBio = async (req, res) => {
         birthday,
         address,
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     // if bio does not exist, create new one
@@ -63,31 +66,46 @@ const updateCoverPhoto = async (req, res) => {
   try {
     const { userId } = req.params;
     const file = req.file;
-    let coverPhoto = null;
 
-    if (file) {
-      const uploadResult = await uploadFileToCloudinary(file);
-      coverPhoto = uploadResult.secure_url;
+    if (!file) {
+      return response(res, 400, "No file provided");
     }
 
-    if (!coverPhoto) {
-      return response(res, 400, "failed to upload cover photo");
+    const existingUser = await User.findById(userId);
+    if (!existingUser) {
+      return response(res, 404, "User not found");
     }
-    //update user profile with cover photo
-    await User.updateOne(
-      { _id: userId },
+    if (existingUser.coverPhotoPublicId) {
+      try {
+        await deleteFileFromCloudinary({
+          publicId: existingUser.coverPhotoPublicId,
+          type: existingUser.coverPhotoType,
+        });
+      } catch (err) {
+        console.error("Cloudinary deletion failed:", err.message);
+      }
+    }
+    const uploadResult = await uploadFileToCloudinary(file);
+
+    const coverPhoto = uploadResult.secure_url;
+    const coverPhotoPublicId = uploadResult.public_id;
+    const coverPhotoType = file.mimetype.startsWith("video")
+      ? "video"
+      : "image";
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
       {
         $set: {
           coverPhoto,
+          coverPhotoPublicId,
+          coverPhotoType,
         },
-      }
-    );
-    const updateUser = await User.findById(userId);
+      },
+      { new: true }, // return updated document
+    ).select("-password");
 
-    if (!updateUser) {
-      return response(res, 404, "user not found with this id");
-    }
-    return response(res, 200, "Cover photo update successfully", updateUser);
+    return response(res, 200, "Cover photo updated successfully", updatedUser);
   } catch (error) {
     console.log(error);
     return response(res, 500, "Internal server error", error.message);
@@ -97,35 +115,56 @@ const updateCoverPhoto = async (req, res) => {
 const updateUserProfile = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { username, gender, dateOfBirth } = req.body;
     const file = req.file;
-    let profilePicture = null;
+    const { username } = req.body;
 
+    const existingUser = await User.findById(userId);
+    if (!existingUser) {
+      return response(res, 404, "User not found");
+    }
+
+    const updateFields = {};
+
+    // update username if provided
+    if (username) {
+      updateFields.username = username;
+    }
+
+    // only handle DP replacement if a new file is sent
     if (file) {
-      const uploadResult = await uploadFileToCloudinary(file);
-      profilePicture = uploadResult.secure_url;
-    }
-
-    //update user profile with cover photo
-    await User.updateOne(
-      { _id: userId },
-      {
-        $set: {
-          username,
-          gender,
-          dateOfBirth,
-          ...(profilePicture && { profilePicture }),
-        },
+      // delete old dp first
+      if (existingUser.dpPublicId) {
+        try {
+          await deleteFileFromCloudinary({
+            publicId: existingUser.dpPublicId,
+            type: existingUser.dpType,
+          });
+        } catch (err) {
+          console.error("Cloudinary deletion failed:", err.message);
+        }
       }
-    );
 
-    const updateUser = await User.findById(userId);
+      const uploadResult = await uploadFileToCloudinary(file);
 
-    if (!updateUser) {
-      return response(res, 404, "user not found with this id");
+      updateFields.profilePicture = uploadResult.secure_url;
+      updateFields.dpPublicId = uploadResult.public_id;
+      updateFields.dpType = file.mimetype.startsWith("video")
+        ? "video"
+        : "image";
     }
 
-    return response(res, 200, "user profile update successfully", updateUser);
+    // if nothing to update
+    if (Object.keys(updateFields).length === 0) {
+      return response(res, 400, "Nothing to update");
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateFields },
+      { new: true },
+    ).select("-password");
+
+    return response(res, 200, "Updated successfully", updatedUser);
   } catch (error) {
     console.log(error);
     return response(res, 500, "Internal server error", error.message);

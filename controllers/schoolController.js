@@ -134,9 +134,6 @@ const updateSchool = async (req, res) => {
     school.intakes = req.body.content.intakes || school.intakes;
     school.intro = req.body.content.intro || school.intro;
     school.location = req.body.content.location || school.location;
-    school.homepage = req.body.content.homepage || school.homepage;
-    school.email = req.body.content.email || school.email;
-    school.mobile = req.body.content.mobile || school.mobile;
     school.schoolDescription =
       req.body.content.schoolDescription || school.schoolDescription;
     await school.save();

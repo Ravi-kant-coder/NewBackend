@@ -32,6 +32,7 @@ const postSchema = new mongoose.Schema(
       default: [],
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    likeCount: { type: Number, default: 0 },
     comments: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -39,7 +40,7 @@ const postSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
-    likeCount: { type: Number, default: 0 },
+
     commentCount: { type: Number, default: 0 },
     share: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     shareCount: { type: Number, default: 0 },

@@ -6,12 +6,9 @@ const {
   getAllPosts,
   deletePost,
   getPostByUserId,
-  deleteStory,
   likePost,
   sharePost,
   addCommentToPost,
-  getAllStory,
-  createStory,
   updatePostContent,
   deleteComment,
   updateComment,
@@ -44,9 +41,6 @@ router.delete(
   deleteComment,
 );
 
-//delete story
-router.delete("/story/:id", authMiddleware, deleteStory);
-
 //get all posts
 router.get("/posts", authMiddleware, getAllPosts);
 
@@ -61,16 +55,5 @@ router.post("/posts/share/:postId", authMiddleware, sharePost);
 
 //user comments post route
 router.post("/posts/comments/:postId", authMiddleware, addCommentToPost);
-
-//create story
-router.post(
-  "/story",
-  authMiddleware,
-  multerMiddleware.single("media"),
-  createStory,
-);
-
-//get all story
-router.get("/story", authMiddleware, getAllStory);
 
 module.exports = router;

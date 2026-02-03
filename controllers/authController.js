@@ -61,31 +61,33 @@ const forgotPassword = async (req, res) => {
 
 const registerUser = async (req, res) => {
   try {
-    console.log("controller req.body:", req.body);
-    console.log("controller req.file:", req.file); // multer puts file here
-
     const { username, email, password } = req.body;
 
-    // check the existing user with email
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return response(res, 400, "This email already exists");
     }
 
-    let profilePicture = "";
+    let profilePicture = null;
+    let dpPublicId = null;
+    let dpType = null;
 
-    // if file exists, upload to cloudinary
+    // if user Uploads DP while registering, upload to cloudinary
     if (req.file) {
       const uploadResult = await uploadFileToCloudinary(req.file);
       profilePicture = uploadResult?.secure_url;
+      dpPublicId = uploadResult?.public_id;
+      dpType = req.file.mimetype.startsWith("video") ? "video" : "image";
     }
 
     // create new user
     const newUser = new User({
       username,
       email,
-      password, // password will be hashed in pre-save hook in usermodel
-      profilePicture, // store cloudinary URL
+      password, // password will be hashed in usermodel
+      profilePicture,
+      dpPublicId,
+      dpType,
     });
 
     await newUser.save();
@@ -190,7 +192,7 @@ const resetPassword = async (req, res) => {
       });
     }
 
-    // 3️⃣ IMPORTANT: assign new password (bcrypt runs in pre-save)
+    // 3️⃣ IMPORTANT: assign new password (bcrypt runs in model)
     user.password = password;
 
     // 4️⃣ Clear reset fields (single-use token)

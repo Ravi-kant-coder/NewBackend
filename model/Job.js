@@ -5,6 +5,7 @@ const jobSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     mediaUrl: { type: String },
     mediaType: { type: String, enum: ["image", "video"] },
+    publicId: { type: String },
     company: { type: String, required: true },
     title: { type: String, required: true },
     requirements: { type: String },

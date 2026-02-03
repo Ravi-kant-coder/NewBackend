@@ -9,17 +9,20 @@ const userSchema = new mongoose.Schema(
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
     profilePicture: { type: String, default: null },
+    dpPublicId: { type: String, default: null },
+    dpType: { type: String, default: null },
     coverPhoto: { type: String, default: null },
+    coverPhotoPublicId: { type: String, default: null },
+    coverPhotoType: { type: String, default: null },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     followerCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
     bio: { type: mongoose.Schema.Types.ObjectId, ref: "Bio" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-// 🔐 HASH PASSWORD BEFORE SAVE
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 

@@ -1,4 +1,5 @@
 const User = require("../model/User");
+const { deleteFileFromCloudinary } = require("../config/cloudinary");
 const response = require("../utils/responceHandler");
 
 const followUser = async (req, res) => {
@@ -66,10 +67,10 @@ const unfollowUser = async (req, res) => {
 
     //remove the user from the following list and update the follower count
     currentUser.following = currentUser.following.filter(
-      (id) => id.toString() !== userIdToUnFollow
+      (id) => id.toString() !== userIdToUnFollow,
     );
     userToUnFollow.followers = userToUnFollow.following.filter(
-      (id) => id.toString() !== userId
+      (id) => id.toString() !== userId,
     );
 
     //update the follower and following count
@@ -108,12 +109,12 @@ const deleteUserFromRequest = async (req, res) => {
 
     //remove the loggedIn userId from the request sender following list
     requestSender.following = requestSender.following.filter(
-      (user) => user.toString() !== loggedInUserId
+      (user) => user.toString() !== loggedInUserId,
     );
 
     //remove the sender id from the loggedIn user followers list
     loggedInUser.followers = loggedInUser.followers.filter(
-      (user) => user.toString() !== requestSenderId
+      (user) => user.toString() !== requestSenderId,
     );
 
     //update follower and following counts
@@ -127,7 +128,7 @@ const deleteUserFromRequest = async (req, res) => {
     return response(
       res,
       200,
-      `Friends request from ${requestSender.username} deleted successfully `
+      `Friends request from ${requestSender.username} deleted successfully `,
     );
   } catch (error) {
     return response(res, 500, "Internal server error", error.message);
@@ -141,7 +142,7 @@ const getAllFriendsRequest = async (req, res) => {
 
     //find the logged in user and retrive their followers and following
     const loggedInUser = await User.findById(loggedInUserId).select(
-      "followers following"
+      "followers following",
     );
     if (!loggedInUser) {
       return response(res, 404, "User not found");
@@ -159,7 +160,7 @@ const getAllFriendsRequest = async (req, res) => {
       res,
       200,
       "user to follow back get successfully",
-      userToFollowBack
+      userToFollowBack,
     );
   } catch (error) {
     return response(res, 500, "Internal server error", error.message);
@@ -172,7 +173,7 @@ const getAllUserForRequest = async (req, res) => {
 
     //find the logged in user and retrive their followers and following
     const loggedInUser = await User.findById(loggedInUserId).select(
-      "followers following"
+      "followers following",
     );
     if (!loggedInUser) {
       return response(res, 404, "User not found");
@@ -190,7 +191,7 @@ const getAllUserForRequest = async (req, res) => {
       res,
       200,
       "user for frined request get successfully ",
-      userForFriendRequest
+      userForFriendRequest,
     );
   } catch (error) {
     return response(res, 500, "Internal server error", error.message);
@@ -206,11 +207,11 @@ const getAllMutualFriends = async (req, res) => {
       .select("followers following")
       .populate(
         "following",
-        "username profilePicture email followerCount followingCount"
+        "username profilePicture email followerCount followingCount",
       )
       .populate(
         "followers",
-        "username profilePicture email followerCount followingCount"
+        "username profilePicture email followerCount followingCount",
       );
 
     if (!loggedInUser) {
@@ -219,12 +220,12 @@ const getAllMutualFriends = async (req, res) => {
 
     //create a set of user id that logged in user is following
     const followingUserId = new Set(
-      loggedInUser.following.map((user) => user._id.toString())
+      loggedInUser.following.map((user) => user._id.toString()),
     );
 
     //filter followers to get only those who are also following you and followed by loggin user
     const mutualFriends = loggedInUser.followers.filter((follower) =>
-      followingUserId.has(follower._id.toString())
+      followingUserId.has(follower._id.toString()),
     );
 
     return response(res, 200, "Mutual friends get successfully", mutualFriends);
@@ -236,7 +237,7 @@ const getAllMutualFriends = async (req, res) => {
 const getAllUser = async (req, res) => {
   try {
     const users = await User.find().select(
-      "username profilePicture email followerCount"
+      "username profilePicture email followerCount",
     );
     return response(res, 200, "users get successfully", users);
   } catch (error) {
@@ -249,18 +250,13 @@ const checkUserAuth = async (req, res) => {
   try {
     const userId = req?.user?.userId;
     if (!userId)
-      return response(
-        res,
-        404,
-        "unauthenticated ! please login before access the data"
-      );
+      return response(res, 401, "Unauthenticated! Please login first");
 
     //fetch the user details and exclude sensitive information
     const user = await User.findById(userId).select("-password");
 
-    if (!user) return response(res, 403, "User not found");
-
-    return response(res, 201, "user retrived and allow to use facebook", user);
+    if (!user) return response(res, 404, "User not found");
+    return response(res, 200, "User retrieved", user);
   } catch (error) {
     return response(res, 500, "Internal server error", error.message);
   }
@@ -291,17 +287,85 @@ const getUserProfile = async (req, res) => {
 };
 
 const deleteUserProfile = async (req, res) => {
-  const user = await User.findById(req.params.userId);
-  user.profilePicture = null;
-  await user.save();
-  res.json({ message: "Profile picture removed." });
+  try {
+    const user = await User.findById(req.params.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.dpPublicId) {
+      try {
+        await deleteFileFromCloudinary({
+          publicId: user.dpPublicId,
+          type: user.dpType,
+        });
+      } catch (err) {
+        console.error("Cloudinary deletion failed:", err.message);
+      }
+
+      user.profilePicture = null;
+      user.dpPublicId = null;
+      user.dpType = null;
+      await user.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile picture removed.",
+    });
+  } catch (error) {
+    console.error("Error deleting DP in controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete DP",
+      error: error.message,
+    });
+  }
 };
 
 const deleteUserCover = async (req, res) => {
-  const user = await User.findById(req.params.userId);
-  user.coverPhoto = null;
-  await user.save();
-  res.json({ message: "Cover Photo removed." });
+  try {
+    const user = await User.findById(req.params.userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.coverPhotoPublicId) {
+      try {
+        await deleteFileFromCloudinary({
+          publicId: user.coverPhotoPublicId,
+          type: user.coverPhotoType,
+        });
+      } catch (err) {
+        console.error("Cloudinary deletion failed:", err.message);
+      }
+
+      user.coverPhoto = null;
+      user.coverPhotoPublicId = null;
+      user.coverPhotoType = null;
+      await user.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Cover Photo removed.",
+    });
+  } catch (error) {
+    console.error("Error deleting Cover Photo in controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete Cover Photo",
+      error: error.message,
+    });
+  }
 };
 
 module.exports = {

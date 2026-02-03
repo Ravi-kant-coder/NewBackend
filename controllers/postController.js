@@ -1,10 +1,8 @@
 const {
   uploadFileToCloudinary,
   deleteMultipleFromCloudinary,
-  deleteFileFromCloudinary,
 } = require("../config/cloudinary");
 const Post = require("../model/Post");
-const Story = require("../model/story");
 const response = require("../utils/responceHandler");
 
 const createPost = async (req, res) => {
@@ -16,15 +14,13 @@ const createPost = async (req, res) => {
           message: "Maximum 4 files allowed",
         });
       }
-      if (req.files) {
-        for (const file of req.files || []) {
-          const result = await uploadFileToCloudinary(file);
-          uploadedMedia.push({
-            url: result.secure_url,
-            publicId: result.public_id,
-            type: file.mimetype.startsWith("video") ? "video" : "image",
-          });
-        }
+      for (const file of req.files || []) {
+        const result = await uploadFileToCloudinary(file);
+        uploadedMedia.push({
+          url: result.secure_url,
+          publicId: result.public_id,
+          type: file.mimetype.startsWith("video") ? "video" : "image",
+        });
       }
     }
     const userId = req.user.userId;
@@ -35,7 +31,14 @@ const createPost = async (req, res) => {
       content,
       uploadedMedia,
     });
-    return response(res, 201, "Post created successfully", newPost);
+    const populatedPost = await Post.findById(newPost._id)
+      .populate("user", "_id username profilePicture")
+      .populate({
+        path: "comments.user",
+        select: "username profilePicture",
+      });
+
+    return response(res, 201, "Post created successfully", populatedPost);
   } catch (error) {
     console.log("error creating post", error);
     return response(res, 500, "Internal server error", error.message);
@@ -119,35 +122,6 @@ const deletePost = async (req, res) => {
   }
 };
 
-const deleteStory = async (req, res) => {
-  try {
-    const story = await Story.findOneAndDelete({
-      _id: req.params.id,
-      user: req.user.userId,
-    });
-    if (!story) {
-      return response(res, 404, "Story not found or not authorized");
-    }
-    if (story.mediaUrl) {
-      try {
-        const parts = story.mediaUrl.split("/");
-        const filename = parts[parts.length - 1];
-        const publicId = filename?.split(".")[0];
-
-        if (publicId) {
-          await deleteFileFromCloudinary(publicId);
-        }
-      } catch (cloudErr) {
-        console.error("Cloudinary story media deletion failed:", cloudErr);
-      }
-    }
-    return response(res, 200, "Story deleted successfully");
-  } catch (error) {
-    console.error("Error deleting story:", error);
-    return response(res, 500, error.message || "Something went wrong");
-  }
-};
-
 const deleteComment = async (req, res) => {
   try {
     if (!req.user?.userId) {
@@ -185,58 +159,16 @@ const deleteComment = async (req, res) => {
   }
 };
 
-const createStory = async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const file = req.file;
-
-    if (!file) {
-      return response(res, 400, "file is required to create a story");
-    }
-    let mediaUrl = null;
-    let mediaType = null;
-
-    if (file) {
-      const uploadResult = await uploadFileToCloudinary(file);
-      mediaUrl = uploadResult?.secure_url;
-      mediaType = file.mimetype.startsWith("video") ? "video" : "image";
-    }
-    const newStory = await new Story({
-      user: userId,
-      mediaUrl,
-      mediaType,
-    });
-    await newStory.save();
-    return response(res, 201, "Story created successfully", newStory);
-  } catch (error) {
-    console.log("error creating story", error);
-    return response(res, 500, "Internal server error", error.message);
-  }
-};
-
-const getAllStory = async (req, res) => {
-  try {
-    const story = await Story.find()
-      .sort({ createdAt: -1 })
-      .populate("user", "_id username profilePicture email");
-
-    return response(res, 201, "Get all story successfully", story);
-  } catch (error) {
-    console.log("error getting story", error);
-    return response(res, 500, "Internal server error", error.message);
-  }
-};
-
 const getAllPosts = async (req, res) => {
   try {
     const posts = await Post.find()
       .sort({ createdAt: -1 })
-      .populate("user", "_id username profilePicture email")
+      .populate("user", "_id username profilePicture")
       .populate({
         path: "comments.user",
         select: "username profilePicture",
       });
-    return response(res, 201, "Get all posts successfully", posts);
+    return response(res, 200, "Got all posts successfully", posts);
   } catch (error) {
     console.log("error getting posts", error);
     return response(res, 500, "Internal server error", error.message);
@@ -253,12 +185,12 @@ const getPostByUserId = async (req, res) => {
 
     const posts = await Post.find({ user: userId })
       .sort({ createdAt: -1 })
-      .populate("user", "_id username profilePicture email")
+      .populate("user", "_id username profilePicture")
       .populate({
         path: "comments.user",
         select: "username profilePicture",
       });
-    return response(res, 201, "Get user post successfully", posts);
+    return response(res, 201, "Got user post successfully", posts);
   } catch (error) {
     console.log("error getting posts", error);
     return response(res, 500, "Internal server error", error.message);
@@ -273,23 +205,17 @@ const likePost = async (req, res) => {
     const updatedPost = await Post.findOneAndUpdate(
       {
         _id: postId,
-        likes: { $ne: userId }, // only if not already liked
+        likes: { $ne: userId },
       },
       {
-        $addToSet: { likes: userId },
+        $push: { likes: userId },
         $inc: { likeCount: 1 },
       },
       { new: true },
     );
 
-    // If null → either post not found OR already liked
     if (!updatedPost) {
-      const exists = await Post.exists({ _id: postId });
-      if (!exists) {
-        return response(res, 404, "Post not found");
-      }
-
-      return response(res, 200, "Post already liked");
+      return response(res, 409, "Post already liked or not found");
     }
 
     return response(res, 200, "Post liked successfully", updatedPost);
@@ -342,9 +268,6 @@ const sharePost = async (req, res) => {
 module.exports = {
   createPost,
   deletePost,
-  deleteStory,
-  createStory,
-  getAllStory,
   updatePostContent,
   getAllPosts,
   getPostByUserId,

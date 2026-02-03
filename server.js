@@ -12,6 +12,7 @@ const authMiddleware = require("./middleware/authMiddleware");
 // Import routes
 const authRoute = require("./routes/authRoute");
 const postRoute = require("./routes/postRoute");
+const storyRoute = require("./routes/storyRoute");
 const userRoute = require("./routes/userRoute");
 const jobRoute = require("./routes/jobRoute");
 const schoolRoute = require("./routes/schoolRoute");
@@ -36,7 +37,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 connectDb();
-
+require("./cron/storyCleanup");
 /* Serve all static files (including /public/free-classes)
    so old HTML, images, and audio files work directly */
 app.use(express.static(path.join(__dirname, "public")));
@@ -52,6 +53,7 @@ app.use("/auth", authRoute);
 
 // Protected API routes (authMiddleware applied)
 app.use("/users", authMiddleware, postRoute);
+app.use("/users", authMiddleware, storyRoute);
 app.use("/users", authMiddleware, userRoute);
 app.use("/candidates", authMiddleware, jobRoute);
 app.use("/students", authMiddleware, schoolRoute);

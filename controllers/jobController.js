@@ -14,11 +14,13 @@ const createJob = async (req, res) => {
     const file = req.file;
     let mediaUrl = null;
     let mediaType = null;
+    let publicId = null;
 
     if (file) {
       const uploadResult = await uploadFileToCloudinary(file);
       mediaUrl = uploadResult?.secure_url;
       mediaType = file.mimetype.startsWith("video") ? "video" : "image";
+      publicId = uploadResult?.public_id;
     }
 
     ["mobile", "homepage", "email"].forEach((key) => {
@@ -37,12 +39,12 @@ const createJob = async (req, res) => {
       jobDescription,
     } = req.body;
 
-    // Creating a new job with the logged-in user as owner
     const job = await Job.create({
       user: userId,
       company,
       mediaUrl,
       mediaType,
+      publicId,
       title,
       requirements,
       location,
@@ -69,7 +71,7 @@ const createJob = async (req, res) => {
 
 const deleteJob = async (req, res) => {
   try {
-    const job = await Job.findOneAndDelete({
+    const job = await Job.findOne({
       _id: req.params.id,
       user: req.user.userId,
     });
@@ -80,21 +82,18 @@ const deleteJob = async (req, res) => {
         message: "Job not found or not authorized",
       });
     }
-
-    if (job.mediaUrl) {
-      try {
-        const parts = job.mediaUrl.split("/");
-        const filename = parts[parts.length - 1];
-        const publicId = filename?.split(".")[0];
-
-        if (publicId) {
-          await deleteFileFromCloudinary(publicId);
-        }
-      } catch (err) {
-        console.error("Cloudinary deletion failed:", err.message);
+    try {
+      if (job.publicId) {
+        await deleteFileFromCloudinary({
+          publicId: job.publicId,
+          type: job.mediaType,
+        });
       }
+    } catch (err) {
+      console.error("Cloudinary deletion failed:", err.message);
     }
 
+    await job.deleteOne();
     return res.status(200).json({
       success: true,
       message: "Job deleted successfully",
