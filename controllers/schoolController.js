@@ -11,6 +11,10 @@ const normalizeNullableString = (value) =>
 const createSchool = async (req, res) => {
   try {
     const userId = req.user.userId;
+    let visibility = false;
+    if (req.body.visibility === true || req.body.visibility === "true") {
+      visibility = true;
+    }
     const uploadedMedia = [];
     if (req.files?.length) {
       if (req.files.length > 4) {
@@ -20,6 +24,7 @@ const createSchool = async (req, res) => {
       }
       for (const file of req.files || []) {
         const result = await uploadFileToCloudinary(file);
+
         uploadedMedia.push({
           url: result.secure_url,
           publicId: result.public_id,
@@ -27,11 +32,9 @@ const createSchool = async (req, res) => {
         });
       }
     }
-
     ["mobile", "homepage", "email"].forEach((key) => {
       req.body[key] = normalizeNullableString(req.body[key]);
     });
-
     const {
       schoolName,
       intakes,
@@ -46,6 +49,7 @@ const createSchool = async (req, res) => {
     const school = await School.create({
       user: userId,
       schoolName,
+      visibility,
       uploadedMedia,
       intakes,
       intro,
@@ -55,6 +59,7 @@ const createSchool = async (req, res) => {
       mobile,
       schoolDescription,
     });
+
     return res.status(201).json({
       success: true,
       message: "School created successfully",
@@ -62,11 +67,24 @@ const createSchool = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating School:", error);
+
     res.status(500).json({
       success: false,
       message: "Failed to create School",
       error: error.message,
     });
+  }
+};
+
+const getAllSchools = async (req, res) => {
+  try {
+    const schools = await School.find()
+      .sort({ createdAt: -1 })
+      .populate("user", "_id username profilePicture");
+    return response(res, 201, "Got Schools successfully", schools);
+  } catch (error) {
+    console.log("error getting Schools", error);
+    return response(res, 500, "Internal server error", error.message);
   }
 };
 
@@ -98,27 +116,15 @@ const deleteSchool = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "School deleted successfully",
+      message: "広告削除されました。",
     });
   } catch (error) {
     console.error("Error deleting School in controller:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to delete School",
+      message: "すみませんでした。またお願いします。",
       error: error.message,
     });
-  }
-};
-
-const getAllSchools = async (req, res) => {
-  try {
-    const schools = await School.find()
-      .sort({ createdAt: -1 })
-      .populate("user", "_id username profilePicture");
-    return response(res, 201, "Got Schools successfully", schools);
-  } catch (error) {
-    console.log("error getting Schools", error);
-    return response(res, 500, "Internal server error", error.message);
   }
 };
 

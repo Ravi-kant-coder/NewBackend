@@ -1,5 +1,5 @@
 const cron = require("node-cron");
-const Story = require("../model/Story");
+const Story = require("../model/story");
 const { deleteMultipleFromCloudinary } = require("../config/cloudinary");
 
 cron.schedule("0 * * * *", async () => {
@@ -12,9 +12,7 @@ cron.schedule("0 * * * *", async () => {
 
     for (const story of expiredStories) {
       if (story.uploadedMedia?.length) {
-        await deleteMultipleFromCloudinary(
-          story.uploadedMedia.map((m) => m.publicId),
-        );
+        await deleteMultipleFromCloudinary(story.uploadedMedia);
       }
       await story.deleteOne();
     }

@@ -22,8 +22,6 @@ router.delete("/story/:id", authMiddleware, deleteStory);
 
 router.post("/stories/likes/:storyId", authMiddleware, likeStory);
 
-router.post("/stories/share/:postId", authMiddleware, shareStory);
-
 router.get("/story", authMiddleware, getAllStories);
 
 module.exports = router;

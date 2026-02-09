@@ -7,7 +7,10 @@ const schoolSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
+    visibility: {
+      type: Boolean,
+      default: false,
+    },
     schoolName: {
       type: String,
       required: true,
@@ -41,13 +44,16 @@ const schoolSchema = new mongoose.Schema(
       default: [],
     },
 
+    intro: {
+      type: String,
+      required: true,
+      maxlength: 5000,
+      minlength: 10,
+    },
+
     intakes: {
       type: String,
       required: true,
-    },
-
-    intro: {
-      type: String,
     },
 
     location: {
@@ -72,9 +78,6 @@ const schoolSchema = new mongoose.Schema(
 
     schoolDescription: {
       type: String,
-      required: true,
-      maxlength: 5000,
-      minlength: 10,
     },
   },
   { timestamps: true },

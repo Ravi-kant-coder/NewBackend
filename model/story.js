@@ -53,11 +53,9 @@ const storySchema = new mongoose.Schema(
 
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     likeCount: { type: Number, default: 0 },
-
-    share: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    shareCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
 
-module.exports = mongoose.model("Story", storySchema);
+const Story = mongoose.model("Story", storySchema);
+module.exports = Story;

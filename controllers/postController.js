@@ -161,14 +161,28 @@ const deleteComment = async (req, res) => {
 
 const getAllPosts = async (req, res) => {
   try {
+    const userId = req.user.userId;
     const posts = await Post.find()
       .sort({ createdAt: -1 })
       .populate("user", "_id username profilePicture")
       .populate({
-        path: "comments.user",
+        path: "comments.user", // Why diff
         select: "username profilePicture",
-      });
-    return response(res, 200, "Got all posts successfully", posts);
+      })
+      .populate({
+        path: "likes",
+        select: "_id username profilePicture", // I need only last three liked users info
+      })
+      .lean();
+
+    const updatedPosts = posts.map((post) => ({
+      ...post,
+      isLiked: post.likes?.some(
+        (user) => user._id.toString() === userId.toString(),
+      ),
+    }));
+
+    return response(res, 200, "Got all posts successfuly", updatedPosts);
   } catch (error) {
     console.log("error getting posts", error);
     return response(res, 500, "Internal server error", error.message);
@@ -176,21 +190,31 @@ const getAllPosts = async (req, res) => {
 };
 
 const getPostByUserId = async (req, res) => {
-  const { userId } = req.params;
-
   try {
+    const { userId } = req.params; // Owner of the post
     if (!userId) {
       return response(res, 400, "UserId is require to get user post");
     }
-
+    const loggedInUserId = req.user.userId;
     const posts = await Post.find({ user: userId })
       .sort({ createdAt: -1 })
       .populate("user", "_id username profilePicture")
       .populate({
         path: "comments.user",
         select: "username profilePicture",
-      });
-    return response(res, 201, "Got user post successfully", posts);
+      })
+      .populate({
+        path: "likes",
+        select: "_id username profilePicture",
+      })
+      .lean();
+    const updatedPosts = posts.map((post) => ({
+      ...post,
+      isLiked: post.likes?.some(
+        (user) => user._id.toString() === loggedInUserId.toString(), //String(loggedInUserId)
+      ),
+    }));
+    return response(res, 200, "Got user post successfully", updatedPosts);
   } catch (error) {
     console.log("error getting posts", error);
     return response(res, 500, "Internal server error", error.message);
@@ -244,27 +268,6 @@ const addCommentToPost = async (req, res) => {
   }
 };
 
-const sharePost = async (req, res) => {
-  const { postId } = req.params;
-  const userId = req.user.userId;
-  try {
-    const post = await Post.findById(postId);
-    if (!post) {
-      return response(res, 404, "post not found");
-    }
-    const hasUserShared = post.share.includes(userId);
-    if (!hasUserShared) {
-      post.share.push(userId);
-    }
-    post.shareCount += 1;
-    await post.save();
-    return response(res, 201, "post share successfully", post);
-  } catch (error) {
-    console.log(error);
-    return response(res, 500, "Internal server error", error.message);
-  }
-};
-
 module.exports = {
   createPost,
   deletePost,
@@ -273,7 +276,6 @@ module.exports = {
   getPostByUserId,
   likePost,
   addCommentToPost,
-  sharePost,
   deleteComment,
   updateComment,
 };

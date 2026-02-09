@@ -40,10 +40,7 @@ const postSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
-
     commentCount: { type: Number, default: 0 },
-    share: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    shareCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 );

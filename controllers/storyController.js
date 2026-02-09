@@ -2,7 +2,7 @@ const {
   uploadFileToCloudinary,
   deleteMultipleFromCloudinary,
 } = require("../config/cloudinary");
-const Story = require("../model/Story");
+const Story = require("../model/story");
 const response = require("../utils/responceHandler");
 
 const createStory = async (req, res) => {
@@ -99,15 +99,22 @@ const deleteStory = async (req, res) => {
 
 const getAllStories = async (req, res) => {
   try {
+    const userId = req.user.userId;
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const stories = await Story.find({
       createdAt: { $gte: twentyFourHoursAgo },
     })
+      .sort({ createdAt: -1 })
       .populate("user", "_id username profilePicture")
-      .sort({ createdAt: -1 });
-
-    return response(res, 200, "Stories fetched", stories);
+      .lean();
+    const updatedStories = stories.map((story) => ({
+      ...story,
+      isLiked: story.likes?.some(
+        (user) => user._id.toString() === userId.toString(),
+      ),
+    }));
+    return response(res, 200, "Stories fetched successfuly", updatedStories);
   } catch (error) {
     return response(res, 500, "Error fetching stories", error.message);
   }
@@ -118,7 +125,7 @@ const likeStory = async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    const updatedStory = await Post.findOneAndUpdate(
+    const likedStory = await Story.findOneAndUpdate(
       {
         _id: storyId,
         likes: { $ne: userId },
@@ -130,34 +137,13 @@ const likeStory = async (req, res) => {
       { new: true },
     );
 
-    if (!updatedStory) {
+    if (!likedStory) {
       return response(res, 409, "story already liked or not found");
     }
 
-    return response(res, 200, "story liked successfully", updatedStory);
+    return response(res, 200, "story liked successfully", likedStory);
   } catch (error) {
     console.error(error);
-    return response(res, 500, "Internal server error", error.message);
-  }
-};
-
-const shareStory = async (req, res) => {
-  const { storyId } = req.params;
-  const userId = req.user.userId;
-  try {
-    const story = await Story.findById(storyId);
-    if (!story) {
-      return response(res, 404, "story not found");
-    }
-    const hasUserShared = story.share.includes(userId);
-    if (!hasUserShared) {
-      story.share.push(userId);
-    }
-    story.shareCount += 1;
-    await story.save();
-    return response(res, 201, "story shared successfully", story);
-  } catch (error) {
-    console.log(error);
     return response(res, 500, "Internal server error", error.message);
   }
 };
@@ -167,5 +153,4 @@ module.exports = {
   deleteStory,
   getAllStories,
   likeStory,
-  shareStory,
 };

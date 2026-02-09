@@ -7,7 +7,6 @@ const {
   deletePost,
   getPostByUserId,
   likePost,
-  sharePost,
   addCommentToPost,
   updatePostContent,
   deleteComment,
@@ -49,9 +48,6 @@ router.get("/posts/user/:userId", authMiddleware, getPostByUserId);
 
 //user like post route
 router.post("/posts/likes/:postId", authMiddleware, likePost);
-
-//user share post route
-router.post("/posts/share/:postId", authMiddleware, sharePost);
 
 //user comments post route
 router.post("/posts/comments/:postId", authMiddleware, addCommentToPost);
