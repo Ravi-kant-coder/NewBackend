@@ -367,6 +367,25 @@ const deleteUserCover = async (req, res) => {
     });
   }
 };
+const getSavedPosts = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId)
+      .populate({
+        path: "savedPosts",
+        populate: [
+          { path: "user", select: "_id username profilePicture" },
+          { path: "comments.user", select: "_id username profilePicture" },
+        ],
+      })
+      .lean();
+
+    return response(res, 200, "Saved posts fetched", user.savedPosts);
+  } catch (error) {
+    return response(res, 500, "Server error");
+  }
+};
 
 module.exports = {
   followUser,
@@ -380,4 +399,5 @@ module.exports = {
   getUserProfile,
   deleteUserProfile,
   deleteUserCover,
+  getSavedPosts,
 };

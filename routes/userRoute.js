@@ -12,6 +12,7 @@ const {
   checkUserAuth,
   deleteUserProfile,
   deleteUserCover,
+  getSavedPosts,
 } = require("../controllers/userController");
 
 const {
@@ -47,6 +48,9 @@ router.post("/notes", authMiddleware, createNote);
 //Fetch notes
 router.get("/notes", authMiddleware, getUserNotes);
 
+//Fetch saved Posts
+router.get("/posts/saved", authMiddleware, getSavedPosts);
+
 //Delete note
 router.delete("/notes/:noteId", authMiddleware, deleteNote);
 
@@ -76,7 +80,7 @@ router.delete(
   "/:userId/profilePicture",
   authMiddleware,
   multerMiddleware.single("profilePicture"),
-  deleteUserProfile
+  deleteUserProfile,
 );
 
 // Delete user cover photo
@@ -84,7 +88,7 @@ router.delete(
   "/:userId/coverPhoto",
   authMiddleware,
   multerMiddleware.single("coverPhoto"),
-  deleteUserCover
+  deleteUserCover,
 );
 
 //create or update user bio
@@ -95,7 +99,7 @@ router.put(
   "/profile/:userId",
   authMiddleware,
   multerMiddleware.single("profilePicture"),
-  updateUserProfile
+  updateUserProfile,
 );
 
 // update user cover
@@ -103,7 +107,7 @@ router.put(
   "/profile/cover-photo/:userId",
   authMiddleware,
   multerMiddleware.single("coverPhoto"),
-  updateCoverPhoto
+  updateCoverPhoto,
 );
 
 module.exports = router;

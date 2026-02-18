@@ -44,6 +44,9 @@ const postSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
+postSchema.index({ createdAt: -1 });
+postSchema.index({ user: 1, createdAt: -1 });
+postSchema.index({ likes: 1 });
 
 const Post = mongoose.model("Post", postSchema);
 module.exports = Post;
