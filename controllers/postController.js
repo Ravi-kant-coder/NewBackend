@@ -95,7 +95,16 @@ const updatePostContent = async (req, res) => {
     if (post.user.toString() !== req.user.userId)
       return response(res, 403, "Unauthorized");
 
+    const ONE_HOUR = 60 * 60 * 1000;
+    const now = Date.now();
+    const createdTime = new Date(post.createdAt).getTime();
+
+    if (now - createdTime > ONE_HOUR) {
+      return response(res, 400, "Edit window expired");
+    }
+
     post.content = req.body.content;
+    post.contentUpdatedAt = new Date();
     await post.save();
 
     const populated = await populatePost(post._id);

@@ -4,7 +4,7 @@ const { deleteMultipleFromCloudinary } = require("../config/cloudinary");
 
 cron.schedule("0 * * * *", async () => {
   try {
-    const expiryTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const expiryTime = new Date(Date.now() - 72 * 60 * 60 * 1000);
 
     const expiredStories = await Story.find({
       createdAt: { $lt: expiryTime },
@@ -16,8 +16,6 @@ cron.schedule("0 * * * *", async () => {
       }
       await story.deleteOne();
     }
-
-    console.log(`[CRON] Deleted ${expiredStories.length} expired stories`);
   } catch (error) {
     console.error("[CRON] Story cleanup failed:", error);
   }
