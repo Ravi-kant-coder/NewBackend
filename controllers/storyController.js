@@ -5,6 +5,10 @@ const {
 const Story = require("../model/story");
 const response = require("../utils/responceHandler");
 
+/* =========================
+   CREATE STORY
+========================= */
+
 const createStory = async (req, res) => {
   try {
     const uploadedMedia = [];
@@ -46,6 +50,7 @@ const createStory = async (req, res) => {
       user: userId,
       content,
       uploadedMedia,
+      expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
     });
 
     const populatedStory = await Story.findById(newStory._id).populate(
@@ -60,6 +65,34 @@ const createStory = async (req, res) => {
   }
 };
 
+/* =========================
+   AUTO CLEAN EXPIRED STORIES
+========================= */
+
+const deleteExpiredStories = async () => {
+  const now = new Date();
+
+  const expiredStories = await Story.find({
+    expiresAt: { $lte: now },
+  });
+
+  for (const story of expiredStories) {
+    if (story.uploadedMedia?.length > 0) {
+      try {
+        await deleteMultipleFromCloudinary(story.uploadedMedia);
+      } catch (err) {
+        console.error("Cloudinary deletion failed:", err);
+      }
+    }
+
+    await story.deleteOne();
+  }
+};
+
+/* =========================
+   DELETE STORY (MANUAL)
+========================= */
+
 const deleteStory = async (req, res) => {
   try {
     const story = await Story.findOne({
@@ -73,7 +106,8 @@ const deleteStory = async (req, res) => {
         message: "Story not found or not authorized",
       });
     }
-    if (Array.isArray(story.uploadedMedia) && story.uploadedMedia.length > 0) {
+
+    if (story.uploadedMedia?.length > 0) {
       try {
         await deleteMultipleFromCloudinary(story.uploadedMedia);
       } catch (err) {
@@ -85,10 +119,10 @@ const deleteStory = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "story deleted successfully",
+      message: "Story deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting story in controller:", error);
+    console.error("Error deleting story:", error);
     res.status(500).json({
       success: false,
       message: "Failed to delete story",
@@ -97,28 +131,38 @@ const deleteStory = async (req, res) => {
   }
 };
 
+/* =========================
+   GET ALL STORIES
+========================= */
+
 const getAllStories = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const stories = await Story.find({
-      createdAt: { $gte: twentyFourHoursAgo },
-    })
+    // 🔥 CLEAN EXPIRED STORIES FIRST
+    await deleteExpiredStories();
+
+    const stories = await Story.find()
       .sort({ createdAt: -1 })
       .populate("user", "_id username profilePicture")
       .lean();
+
     const updatedStories = stories.map((story) => ({
       ...story,
       isLiked: story.likes?.some(
-        (user) => user._id.toString() === userId.toString(),
+        (user) => user.toString() === userId.toString(),
       ),
     }));
-    return response(res, 200, "Stories fetched successfuly", updatedStories);
+
+    return response(res, 200, "Stories fetched successfully", updatedStories);
   } catch (error) {
     return response(res, 500, "Error fetching stories", error.message);
   }
 };
+
+/* =========================
+   LIKE STORY
+========================= */
 
 const likeStory = async (req, res) => {
   const { storyId } = req.params;
@@ -138,10 +182,10 @@ const likeStory = async (req, res) => {
     );
 
     if (!likedStory) {
-      return response(res, 409, "story already liked or not found");
+      return response(res, 409, "Story already liked or not found");
     }
 
-    return response(res, 200, "story liked successfully", likedStory);
+    return response(res, 200, "Story liked successfully", likedStory);
   } catch (error) {
     console.error(error);
     return response(res, 500, "Internal server error", error.message);

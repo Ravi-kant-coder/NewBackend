@@ -16,14 +16,19 @@ const storySchema = new mongoose.Schema(
     uploadedMedia: {
       type: [
         {
-          url: { type: String, required: true },
-          publicId: { type: String, required: true },
+          url: {
+            type: String,
+            required: true,
+          },
+          publicId: {
+            type: String,
+            required: true,
+          },
           type: {
             type: String,
             enum: ["image", "video"],
             required: true,
           },
-
           caption: {
             type: String,
             trim: true,
@@ -51,10 +56,28 @@ const storySchema = new mongoose.Schema(
       default: [],
     },
 
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    likeCount: { type: Number, default: 0 },
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    likeCount: {
+      type: Number,
+      default: 0,
+    },
+
+    // Story expiry after 72 hours handled in controller (for cloudinary cleanup)
+    expiresAt: {
+      type: Date,
+      required: true,
+      index: true,
+    },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
 
 const Story = mongoose.model("Story", storySchema);

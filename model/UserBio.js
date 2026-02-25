@@ -7,13 +7,13 @@ const bioSchema = new mongoose.Schema(
     relationship: { type: String, default: null },
     workplace: { type: String, default: null },
     education: { type: String, default: null },
-    phone: { type: String, default: null },
+    nationality: { type: String, default: null },
     hometown: { type: String, default: null },
     birthday: { type: String, default: null },
     address: { type: String, default: null },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Bio = mongoose.model("Bio", bioSchema);

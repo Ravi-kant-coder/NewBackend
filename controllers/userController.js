@@ -136,63 +136,137 @@ const deleteUserFromRequest = async (req, res) => {
 };
 
 //get all frined request for user
+// const getAllFriendsRequest = async (req, res) => {
+//   try {
+//     const loggedInUserId = req.user.userId;
+
+//     //find the logged in user and retrive their followers and following
+//     const loggedInUser = await User.findById(loggedInUserId).select(
+//       "followers following",
+//     );
+//     if (!loggedInUser) {
+//       return response(res, 404, "User not found");
+//     }
+
+//     //find user who follow the logged in user but are not followed back
+//     const userToFollowBack = await User.find({
+//       _id: {
+//         $in: loggedInUser.followers, //user who follow the logged in user
+//         $nin: loggedInUser.following, // exclued users the logged in user already follow back
+//       },
+//     }).select("username profilePicture email followerCount");
+
+//     return response(
+//       res,
+//       200,
+//       "user to follow back get successfully",
+//       userToFollowBack,
+//     );
+//   } catch (error) {
+//     return response(res, 500, "Internal server error", error.message);
+//   }
+// };
+
 const getAllFriendsRequest = async (req, res) => {
   try {
     const loggedInUserId = req.user.userId;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
 
-    //find the logged in user and retrive their followers and following
     const loggedInUser = await User.findById(loggedInUserId).select(
       "followers following",
     );
+
     if (!loggedInUser) {
       return response(res, 404, "User not found");
     }
 
-    //find user who follow the logged in user but are not followed back
-    const userToFollowBack = await User.find({
+    const query = {
       _id: {
-        $in: loggedInUser.followers, //user who follow the logged in user
-        $nin: loggedInUser.following, // exclued users the logged in user already follow back
+        $in: loggedInUser.followers,
+        $nin: loggedInUser.following,
       },
-    }).select("username profilePicture email followerCount");
+    };
 
-    return response(
-      res,
-      200,
-      "user to follow back get successfully",
-      userToFollowBack,
-    );
+    const total = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .select("username profilePicture email followerCount")
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    return response(res, 200, "Friend requests fetched", {
+      users,
+      hasMore: page * limit < total,
+    });
   } catch (error) {
     return response(res, 500, "Internal server error", error.message);
   }
 };
 
+// const getAllUserForRequest = async (req, res) => {
+//   try {
+//     const loggedInUserId = req.user.userId;
+
+//     //find the logged in user and retrive their followers and following
+//     const loggedInUser = await User.findById(loggedInUserId).select(
+//       "followers following",
+//     );
+//     if (!loggedInUser) {
+//       return response(res, 404, "User not found");
+//     }
+
+//     //find user who  neither followers not following of the login user
+//     const userForFriendRequest = await User.find({
+//       _id: {
+//         $ne: loggedInUser, //user who follow the logged in user
+//         $nin: [...loggedInUser.following, ...loggedInUser.followers], // excluded both
+//       },
+//     }).select("username profilePicture email followerCount");
+
+//     return response(
+//       res,
+//       200,
+//       "user for frined request get successfully ",
+//       userForFriendRequest,
+//     );
+//   } catch (error) {
+//     return response(res, 500, "Internal server error", error.message);
+//   }
+// };
+
 const getAllUserForRequest = async (req, res) => {
   try {
     const loggedInUserId = req.user.userId;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
 
-    //find the logged in user and retrive their followers and following
     const loggedInUser = await User.findById(loggedInUserId).select(
       "followers following",
     );
+
     if (!loggedInUser) {
       return response(res, 404, "User not found");
     }
 
-    //find user who  neither followers not following of the login user
-    const userForFriendRequest = await User.find({
+    const query = {
       _id: {
-        $ne: loggedInUser, //user who follow the logged in user
-        $nin: [...loggedInUser.following, ...loggedInUser.followers], // excluded both
+        $ne: loggedInUserId,
+        $nin: [...loggedInUser.following, ...loggedInUser.followers],
       },
-    }).select("username profilePicture email followerCount");
+    };
 
-    return response(
-      res,
-      200,
-      "user for frined request get successfully ",
-      userForFriendRequest,
-    );
+    const total = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .select("username profilePicture email followerCount")
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    return response(res, 200, "Friend suggestions fetched", {
+      users,
+      hasMore: page * limit < total,
+    });
   } catch (error) {
     return response(res, 500, "Internal server error", error.message);
   }
