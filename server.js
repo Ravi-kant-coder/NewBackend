@@ -45,7 +45,7 @@ app.use("/students", authMiddleware, schoolRoute);
 app.use("/youtube", authMiddleware, youTubeSyncRoute);
 
 // Blog routes (public GET, protected write handled inside route file)
-app.use("/blogs", blogRoute);
+app.use("/api/blogs", blogRoute);
 
 // Other routes
 app.use("/", require("./routes/videos"));

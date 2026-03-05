@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const authMiddleware = require("../middleware/authMiddleware");
 const { multerMiddleware } = require("../config/cloudinary");
 
@@ -13,26 +14,26 @@ const {
 
 /* ===================== PUBLIC ROUTES ===================== */
 
-// 🔥 For SSG blog listing
+// 🔥 Blog listing (Lightweight for SSG + Sidebar)
 router.get("/", getAllBlogs);
 
-// 🔥 For SSG individual blog page
+// 🔥 Single blog by slug (Full content for SSG page)
 router.get("/:slug", getSingleBlog);
 
 /* ===================== PROTECTED ROUTES ===================== */
 
-// Create blog
+// 🔒 Create blog (Single featured image upload)
 router.post(
-  "/",
+  "/admin",
   authMiddleware,
-  multerMiddleware.array("media", 3),
+  multerMiddleware.single("featuredImage"),
   createBlog,
 );
 
-// Update blog
-router.put("/:id", authMiddleware, updateBlog);
+// 🔒 Update blog (Optional image replacement)
+router.put("/admin/:id", authMiddleware, updateBlog);
 
-// Delete blog
-router.delete("/:id", authMiddleware, deleteBlog);
+// 🔒 Delete blog
+router.delete("/admin/:id", authMiddleware, deleteBlog);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const {
   uploadFileToCloudinary,
-  deleteMultipleFromCloudinary,
+  deleteFromCloudinary,
 } = require("../config/cloudinary");
 
 const Blog = require("../model/Blog");
@@ -18,34 +18,16 @@ const createBlog = async (req, res) => {
       metaTitle,
       metaDescription,
       keywords,
-      segment1Heading,
-      segment1Text,
-      segment2Heading,
-      segment2Text,
-      segment3Heading,
-      segment3Text,
+      excerpt,
+      content,
+      isPublished,
     } = req.body;
 
-    const uploadedMedia = [];
-
-    if (req.files?.length) {
-      if (req.files.length > 3) {
-        return res.status(400).json({
-          success: false,
-          message: "Maximum 3 files allowed",
-        });
-      }
-
-      for (const file of req.files) {
-        const result = await uploadFileToCloudinary(file);
-
-        uploadedMedia.push({
-          url: result.secure_url,
-          publicId: result.public_id,
-          type: file.mimetype.startsWith("video") ? "video" : "image",
-        });
-      }
+    if (!req.file) {
+      return response(res, 400, "Featured image is required");
     }
+
+    const uploadResult = await uploadFileToCloudinary(req.file);
 
     const blog = await Blog.create({
       user: userId,
@@ -54,50 +36,32 @@ const createBlog = async (req, res) => {
       metaTitle,
       metaDescription,
       keywords,
-      segment1Heading,
-      segment1Text,
-      segment2Heading,
-      segment2Text,
-      segment3Heading,
-      segment3Text,
-      uploadedMedia,
+      excerpt,
+      content,
+      isPublished,
+      featuredImage: {
+        url: uploadResult.secure_url,
+        publicId: uploadResult.public_id,
+      },
     });
 
-    return res.status(201).json({
-      success: true,
-      message: "Blog created successfully",
-      blog,
-    });
+    return response(res, 201, "Blog created successfully", blog);
   } catch (error) {
     console.error("Error creating Blog:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to create Blog",
-      error: error.message,
-    });
+    return response(res, 500, "Failed to create Blog", error.message);
   }
 };
 
-/* ===================== GET ALL BLOGS (LIGHTWEIGHT FOR SSG LISTING) ===================== */
+/* ===================== GET BLOG LIST (LIGHTWEIGHT FOR SSG & SIDEBAR) ===================== */
 
 const getAllBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find()
-      .select("title slug uploadedMedia createdAt")
+    const blogs = await Blog.find({ isPublished: true })
+      .select("title slug featuredImage excerpt createdAt")
       .sort({ createdAt: -1 })
       .lean();
 
-    // Send only first image as thumbnail
-    const lightweightBlogs = blogs.map((blog) => ({
-      _id: blog._id,
-      title: blog.title,
-      slug: blog.slug,
-      createdAt: blog.createdAt,
-      uploadedMedia: blog.uploadedMedia?.length ? [blog.uploadedMedia[0]] : [],
-    }));
-
-    return response(res, 200, "Got Blogs successfully", lightweightBlogs);
+    return response(res, 200, "Blogs fetched successfully", blogs);
   } catch (error) {
     console.error("Error getting Blogs:", error);
     return response(res, 500, "Internal server error", error.message);
@@ -108,7 +72,10 @@ const getAllBlogs = async (req, res) => {
 
 const getSingleBlog = async (req, res) => {
   try {
-    const blog = await Blog.findOne({ slug: req.params.slug }).lean();
+    const blog = await Blog.findOne({
+      slug: req.params.slug,
+      isPublished: true,
+    }).lean();
 
     if (!blog) {
       return response(res, 404, "Blog not found");
@@ -131,15 +98,12 @@ const deleteBlog = async (req, res) => {
     });
 
     if (!blog) {
-      return res.status(404).json({
-        success: false,
-        message: "Blog not found or not authorized",
-      });
+      return response(res, 404, "Blog not found or not authorized");
     }
 
-    if (Array.isArray(blog.uploadedMedia) && blog.uploadedMedia.length > 0) {
+    if (blog.featuredImage?.publicId) {
       try {
-        await deleteMultipleFromCloudinary(blog.uploadedMedia);
+        await deleteFromCloudinary(blog.featuredImage.publicId);
       } catch (err) {
         console.error("Cloudinary deletion failed:", err);
       }
@@ -147,18 +111,10 @@ const deleteBlog = async (req, res) => {
 
     await blog.deleteOne();
 
-    return res.status(200).json({
-      success: true,
-      message: "Blog deleted successfully",
-    });
+    return response(res, 200, "Blog deleted successfully");
   } catch (error) {
-    console.error("Error deleting Blog in controller:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to delete Blog",
-      error: error.message,
-    });
+    console.error("Error deleting Blog:", error);
+    return response(res, 500, "Failed to delete Blog", error.message);
   }
 };
 
@@ -176,19 +132,51 @@ const updateBlog = async (req, res) => {
       return response(res, 403, "You do not own this Blog");
     }
 
-    blog.segment1Heading = req.body.segment1Heading || blog.segment1Heading;
-    blog.segment1Text = req.body.segment1Text || blog.segment1Text;
-    blog.segment2Heading = req.body.segment2Heading || blog.segment2Heading;
-    blog.segment2Text = req.body.segment2Text || blog.segment2Text;
-    blog.segment3Heading = req.body.segment3Heading || blog.segment3Text;
-    blog.segment3Text = req.body.segment3Text || blog.segment3Text;
+    const {
+      title,
+      slug,
+      metaTitle,
+      metaDescription,
+      keywords,
+      excerpt,
+      content,
+      isPublished,
+    } = req.body;
+
+    // Update text fields
+    if (title) blog.title = title;
+    if (slug) blog.slug = slug;
+    if (metaTitle) blog.metaTitle = metaTitle;
+    if (metaDescription) blog.metaDescription = metaDescription;
+    if (keywords) blog.keywords = keywords;
+    if (excerpt) blog.excerpt = excerpt;
+    if (content) blog.content = content;
+    if (typeof isPublished !== "undefined") blog.isPublished = isPublished;
+
+    // If new image uploaded → replace old one
+    if (req.file) {
+      if (blog.featuredImage?.publicId) {
+        try {
+          await deleteFromCloudinary(blog.featuredImage.publicId);
+        } catch (err) {
+          console.error("Old image deletion failed:", err);
+        }
+      }
+
+      const uploadResult = await uploadFileToCloudinary(req.file);
+
+      blog.featuredImage = {
+        url: uploadResult.secure_url,
+        publicId: uploadResult.public_id,
+      };
+    }
 
     await blog.save();
 
-    return response(res, 200, "Blog updated", blog);
+    return response(res, 200, "Blog updated successfully", blog);
   } catch (error) {
-    console.error("Error updating blog in controller:", error);
-    return response(res, 500, "Something went wrong in controller");
+    console.error("Error updating blog:", error);
+    return response(res, 500, "Something went wrong", error.message);
   }
 };
 
