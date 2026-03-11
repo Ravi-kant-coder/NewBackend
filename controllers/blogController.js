@@ -1,10 +1,11 @@
 const {
   uploadFileToCloudinary,
-  deleteFromCloudinary,
+  deleteFileFromCloudinary,
 } = require("../config/cloudinary");
 
 const Blog = require("../model/Blog");
 const response = require("../utils/responceHandler");
+const slugify = require("slugify");
 
 /* ===================== CREATE BLOG ===================== */
 
@@ -12,9 +13,8 @@ const createBlog = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    const {
+    let {
       title,
-      slug,
       metaTitle,
       metaDescription,
       keywords,
@@ -23,11 +23,30 @@ const createBlog = async (req, res) => {
       isPublished,
     } = req.body;
 
+    if (!title || !content) {
+      return response(res, 400, "Title and content are required");
+    }
+
     if (!req.file) {
       return response(res, 400, "Featured image is required");
     }
 
+    /* ---------- slug generation ---------- */
+
+    let baseSlug = slugify(title, { lower: true, strict: true });
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (await Blog.findOne({ slug })) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    /* ---------- upload image ---------- */
+
     const uploadResult = await uploadFileToCloudinary(req.file);
+
+    /* ---------- create blog ---------- */
 
     const blog = await Blog.create({
       user: userId,
@@ -52,7 +71,7 @@ const createBlog = async (req, res) => {
   }
 };
 
-/* ===================== GET BLOG LIST (LIGHTWEIGHT FOR SSG & SIDEBAR) ===================== */
+/* ===================== GET BLOG LIST ===================== */
 
 const getAllBlogs = async (req, res) => {
   try {
@@ -68,9 +87,9 @@ const getAllBlogs = async (req, res) => {
   }
 };
 
-/* ===================== GET SINGLE BLOG (FULL CONTENT FOR SSG PAGE) ===================== */
+/* ===================== GET SINGLE BLOG FOR PUBLIC ===================== */
 
-const getSingleBlog = async (req, res) => {
+const getSingleBlogBySlug = async (req, res) => {
   try {
     const blog = await Blog.findOne({
       slug: req.params.slug,
@@ -88,22 +107,57 @@ const getSingleBlog = async (req, res) => {
   }
 };
 
+/* ===================== GET SINGLE BLOG FOR ADMIN TO EDIT ===================== */
+
+const getSingleBlogById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const blog = await Blog.findById(id);
+
+    if (!blog) {
+      return res.status(404).json({
+        success: false,
+        message: "Blog not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: blog,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 /* ===================== DELETE BLOG ===================== */
 
 const deleteBlog = async (req, res) => {
   try {
-    const blog = await Blog.findOne({
-      _id: req.params.id,
-      user: req.user.userId,
-    });
+    const blog = await Blog.findById(req.params.id);
 
     if (!blog) {
-      return response(res, 404, "Blog not found or not authorized");
+      return response(res, 404, "Blog not found");
     }
+
+    /* ---------- ownership check ---------- */
+
+    if (blog.user.toString() !== req.user.userId) {
+      return response(res, 403, "You are not allowed to delete this blog");
+    }
+
+    /* ---------- delete cloudinary image ---------- */
 
     if (blog.featuredImage?.publicId) {
       try {
-        await deleteFromCloudinary(blog.featuredImage.publicId);
+        await deleteFileFromCloudinary({
+          publicId: blog.featuredImage.publicId,
+          type: "image",
+        });
       } catch (err) {
         console.error("Cloudinary deletion failed:", err);
       }
@@ -128,13 +182,14 @@ const updateBlog = async (req, res) => {
       return response(res, 404, "Blog not found");
     }
 
+    /* ---------- ownership check ---------- */
+
     if (blog.user.toString() !== req.user.userId) {
       return response(res, 403, "You do not own this Blog");
     }
 
-    const {
+    let {
       title,
-      slug,
       metaTitle,
       metaDescription,
       keywords,
@@ -143,9 +198,29 @@ const updateBlog = async (req, res) => {
       isPublished,
     } = req.body;
 
-    // Update text fields
-    if (title) blog.title = title;
-    if (slug) blog.slug = slug;
+    /* ---------- regenerate slug if title changed ---------- */
+
+    if (title && title !== blog.title) {
+      let baseSlug = slugify(title, { lower: true, strict: true });
+      let slug = baseSlug;
+      let counter = 1;
+
+      while (
+        await Blog.findOne({
+          slug,
+          _id: { $ne: blog._id },
+        })
+      ) {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      blog.slug = slug;
+      blog.title = title;
+    }
+
+    /* ---------- update other fields ---------- */
+
     if (metaTitle) blog.metaTitle = metaTitle;
     if (metaDescription) blog.metaDescription = metaDescription;
     if (keywords) blog.keywords = keywords;
@@ -153,11 +228,15 @@ const updateBlog = async (req, res) => {
     if (content) blog.content = content;
     if (typeof isPublished !== "undefined") blog.isPublished = isPublished;
 
-    // If new image uploaded → replace old one
+    /* ---------- replace image ---------- */
+
     if (req.file) {
       if (blog.featuredImage?.publicId) {
         try {
-          await deleteFromCloudinary(blog.featuredImage.publicId);
+          await deleteFileFromCloudinary({
+            publicId: blog.featuredImage.publicId,
+            type: "image",
+          });
         } catch (err) {
           console.error("Old image deletion failed:", err);
         }
@@ -183,7 +262,8 @@ const updateBlog = async (req, res) => {
 module.exports = {
   createBlog,
   getAllBlogs,
-  getSingleBlog,
+  getSingleBlogById,
+  getSingleBlogBySlug,
   deleteBlog,
   updateBlog,
 };

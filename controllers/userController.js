@@ -135,38 +135,6 @@ const deleteUserFromRequest = async (req, res) => {
   }
 };
 
-//get all frined request for user
-// const getAllFriendsRequest = async (req, res) => {
-//   try {
-//     const loggedInUserId = req.user.userId;
-
-//     //find the logged in user and retrive their followers and following
-//     const loggedInUser = await User.findById(loggedInUserId).select(
-//       "followers following",
-//     );
-//     if (!loggedInUser) {
-//       return response(res, 404, "User not found");
-//     }
-
-//     //find user who follow the logged in user but are not followed back
-//     const userToFollowBack = await User.find({
-//       _id: {
-//         $in: loggedInUser.followers, //user who follow the logged in user
-//         $nin: loggedInUser.following, // exclued users the logged in user already follow back
-//       },
-//     }).select("username profilePicture email followerCount");
-
-//     return response(
-//       res,
-//       200,
-//       "user to follow back get successfully",
-//       userToFollowBack,
-//     );
-//   } catch (error) {
-//     return response(res, 500, "Internal server error", error.message);
-//   }
-// };
-
 const getAllFriendsRequest = async (req, res) => {
   try {
     const loggedInUserId = req.user.userId;
@@ -203,37 +171,6 @@ const getAllFriendsRequest = async (req, res) => {
     return response(res, 500, "Internal server error", error.message);
   }
 };
-
-// const getAllUserForRequest = async (req, res) => {
-//   try {
-//     const loggedInUserId = req.user.userId;
-
-//     //find the logged in user and retrive their followers and following
-//     const loggedInUser = await User.findById(loggedInUserId).select(
-//       "followers following",
-//     );
-//     if (!loggedInUser) {
-//       return response(res, 404, "User not found");
-//     }
-
-//     //find user who  neither followers not following of the login user
-//     const userForFriendRequest = await User.find({
-//       _id: {
-//         $ne: loggedInUser, //user who follow the logged in user
-//         $nin: [...loggedInUser.following, ...loggedInUser.followers], // excluded both
-//       },
-//     }).select("username profilePicture email followerCount");
-
-//     return response(
-//       res,
-//       200,
-//       "user for frined request get successfully ",
-//       userForFriendRequest,
-//     );
-//   } catch (error) {
-//     return response(res, 500, "Internal server error", error.message);
-//   }
-// };
 
 const getAllUserForRequest = async (req, res) => {
   try {

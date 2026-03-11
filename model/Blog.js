@@ -20,6 +20,8 @@ const blogSchema = new mongoose.Schema(
       index: true,
     },
 
+    /* ===================== AUTHOR ===================== */
+
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -84,13 +86,18 @@ const blogSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-/* ===================== TEXT INDEX ===================== */
+/* ===================== TEXT SEARCH INDEX ===================== */
 
 blogSchema.index({
   title: "text",
   content: "text",
   excerpt: "text",
 });
+
+/* ===================== SLUG + USER INDEX ===================== */
+/* prevents duplicate slug conflicts in large systems */
+
+blogSchema.index({ slug: 1, user: 1 });
 
 /* ===================== EXPORT ===================== */
 

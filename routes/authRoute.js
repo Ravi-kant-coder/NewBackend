@@ -12,6 +12,7 @@ const {
 const passport = require("passport");
 const { generateToken } = require("../utils/generateToken");
 const router = express.Router();
+
 router.get("/me", authMiddleware, getMe);
 
 router.post(

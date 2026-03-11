@@ -6,23 +6,20 @@ const { multerMiddleware } = require("../config/cloudinary");
 
 const {
   getAllBlogs,
-  getSingleBlog,
+  getSingleBlogBySlug,
+  getSingleBlogById,
   createBlog,
   updateBlog,
-  deleteBlog,
+  // deleteBlog,
 } = require("../controllers/blogController");
 
-/* ===================== PUBLIC ROUTES ===================== */
-
-// 🔥 Blog listing (Lightweight for SSG + Sidebar)
+// Blog list (For main page and sidebar)
 router.get("/", getAllBlogs);
 
-// 🔥 Single blog by slug (Full content for SSG page)
-router.get("/:slug", getSingleBlog);
+// For Admin to edit blog
+router.get("/admin/:id", authMiddleware, getSingleBlogById);
 
-/* ===================== PROTECTED ROUTES ===================== */
-
-// 🔒 Create blog (Single featured image upload)
+// Create blog
 router.post(
   "/admin",
   authMiddleware,
@@ -30,10 +27,18 @@ router.post(
   createBlog,
 );
 
-// 🔒 Update blog (Optional image replacement)
-router.put("/admin/:id", authMiddleware, updateBlog);
+// Update blog (image optional)
+router.put(
+  "/admin/:id",
+  authMiddleware,
+  multerMiddleware.single("featuredImage"),
+  updateBlog,
+);
 
-// 🔒 Delete blog
-router.delete("/admin/:id", authMiddleware, deleteBlog);
+// Single blog (SSG page)
+router.get("/:slug", getSingleBlogBySlug);
+
+// Delete blog
+/* router.delete("/admin/:id", authMiddleware, deleteBlog); */
 
 module.exports = router;

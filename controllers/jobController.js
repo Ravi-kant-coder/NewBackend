@@ -2,6 +2,7 @@ const {
   uploadFileToCloudinary,
   deleteFileFromCloudinary,
 } = require("../config/cloudinary");
+
 const Job = require("../model/Job");
 const response = require("../utils/responceHandler");
 

@@ -33,7 +33,6 @@ connectDb();
 
 /* ===================== ROUTES ===================== */
 
-// Public auth routes
 app.use("/auth", authRoute);
 
 // Protected routes
@@ -44,10 +43,17 @@ app.use("/candidates", authMiddleware, jobRoute);
 app.use("/students", authMiddleware, schoolRoute);
 app.use("/youtube", authMiddleware, youTubeSyncRoute);
 
-// Blog routes (public GET, protected write handled inside route file)
+// Blogs
 app.use("/api/blogs", blogRoute);
 
-// Other routes
+// Admin
+app.get("/api/auth/me", authMiddleware, (req, res) => {
+  res.json({
+    success: true,
+    data: req.user,
+  });
+});
+
 app.use("/", require("./routes/videos"));
 
 /* ===================== SERVER ===================== */
