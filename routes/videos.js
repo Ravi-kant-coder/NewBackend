@@ -1,11 +1,9 @@
 const express = require("express");
-const authMiddleware = require("../middleware/authMiddleware");
 const Video = require("../model/Videos");
 
 const router = express.Router();
 
-// GET Videos with pagination
-router.get("/videos", authMiddleware, async (req, res) => {
+router.get("/videos", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
@@ -32,13 +30,6 @@ router.get("/videos", authMiddleware, async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-});
-
-// Update Tags
-router.patch("/videos", authMiddleware, async (req, res) => {
-  const { _id, tags } = req.body;
-  await Video.findByIdAndUpdate(_id, { tags });
-  res.json({ success: true });
 });
 
 module.exports = router;

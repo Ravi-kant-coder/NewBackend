@@ -25,14 +25,17 @@ const populatePost = async (postId) => {
     .lean();
 };
 
-const buildPostResponse = (post, userId, savedPostIds) => {
-  const isLiked = post.likes?.some(
-    (user) => user._id.toString() === userId.toString(),
-  );
+const buildPostResponse = (post, userId = null, savedPostIds = []) => {
+  let isLiked = false;
+  let isSaved = false;
 
-  const isSaved = savedPostIds?.some(
-    (id) => id.toString() === post._id.toString(),
-  );
+  if (userId) {
+    isLiked = post.likes?.some(
+      (user) => user._id.toString() === userId.toString(),
+    );
+
+    isSaved = savedPostIds?.some((id) => id.toString() === post._id.toString());
+  }
 
   return {
     ...post,
@@ -293,12 +296,16 @@ const deleteComment = async (req, res) => {
 
 const getAllPosts = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId || null;
     const page = parseInt(req.query.page) || 1;
     const limit = 10;
     const skip = (page - 1) * limit;
 
-    const user = await User.findById(userId).select("savedPosts").lean();
+    let savedPostIds = [];
+    if (userId) {
+      const user = await User.findById(userId).select("savedPosts").lean();
+      savedPostIds = user?.savedPosts || [];
+    }
 
     const posts = await Post.find()
       .sort({ createdAt: -1 })
@@ -316,7 +323,7 @@ const getAllPosts = async (req, res) => {
       .lean();
 
     const finalPosts = posts.map((post) =>
-      buildPostResponse(post, userId, user.savedPosts),
+      buildPostResponse(post, userId, savedPostIds),
     );
 
     return response(res, 200, "Posts fetched", {

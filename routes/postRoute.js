@@ -43,7 +43,7 @@ router.delete(
 );
 
 //get all posts
-router.get("/posts", authMiddleware, getAllPosts);
+router.get("/posts", getAllPosts);
 
 //get post by userid
 router.get("/posts/user/:userId", authMiddleware, getPostByUserId);

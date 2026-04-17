@@ -35,15 +35,12 @@ connectDb();
 
 app.use("/auth", authRoute);
 
-// Protected routes
-app.use("/users", authMiddleware, postRoute);
-app.use("/users", authMiddleware, storyRoute);
+app.use("/users", postRoute);
+app.use("/users", storyRoute);
 app.use("/users", authMiddleware, userRoute);
 app.use("/candidates", authMiddleware, jobRoute);
 app.use("/students", authMiddleware, schoolRoute);
-app.use("/youtube", authMiddleware, youTubeSyncRoute);
-
-// Blogs
+app.use("/youtube", youTubeSyncRoute);
 app.use("/api/blogs", blogRoute);
 
 // Admin

@@ -134,10 +134,9 @@ const deleteStory = async (req, res) => {
 /* =========================
    GET ALL STORIES
 ========================= */
-
 const getAllStories = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId || null;
 
     // 🔥 CLEAN EXPIRED STORIES FIRST
     await deleteExpiredStories();
@@ -147,12 +146,20 @@ const getAllStories = async (req, res) => {
       .populate("user", "_id username profilePicture")
       .lean();
 
-    const updatedStories = stories.map((story) => ({
-      ...story,
-      isLiked: story.likes?.some(
-        (user) => user.toString() === userId.toString(),
-      ),
-    }));
+    const updatedStories = stories.map((story) => {
+      let isLiked = false;
+
+      if (userId) {
+        isLiked = story.likes?.some(
+          (user) => user.toString() === userId.toString(),
+        );
+      }
+
+      return {
+        ...story,
+        isLiked,
+      };
+    });
 
     return response(res, 200, "Stories fetched successfully", updatedStories);
   } catch (error) {

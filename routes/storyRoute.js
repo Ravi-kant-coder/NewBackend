@@ -4,7 +4,6 @@ const { multerMiddleware } = require("../config/cloudinary");
 const {
   deleteStory,
   likeStory,
-  shareStory,
   getAllStories,
   createStory,
 } = require("../controllers/storyController");
@@ -22,6 +21,6 @@ router.delete("/story/:id", authMiddleware, deleteStory);
 
 router.post("/stories/likes/:storyId", authMiddleware, likeStory);
 
-router.get("/story", authMiddleware, getAllStories);
+router.get("/stories", getAllStories);
 
 module.exports = router;
