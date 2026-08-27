@@ -6,7 +6,6 @@ const connectDb = require("./config/db");
 require("dotenv").config();
 
 const authMiddleware = require("./middleware/authMiddleware");
-
 const authRoute = require("./routes/authRoute");
 const postRoute = require("./routes/postRoute");
 const storyRoute = require("./routes/storyRoute");
@@ -34,7 +33,6 @@ connectDb();
 /* ===================== ROUTES ===================== */
 
 app.use("/auth", authRoute);
-
 app.use("/users", postRoute);
 app.use("/users", storyRoute);
 app.use("/users", authMiddleware, userRoute);

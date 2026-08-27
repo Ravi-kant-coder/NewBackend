@@ -248,9 +248,9 @@ const getAllMutualFriends = async (req, res) => {
 const getAllUser = async (req, res) => {
   try {
     const users = await User.find().select(
-      "username profilePicture email followerCount",
+      "username email profilePicture followerCount followingCount savedPosts",
     );
-    return response(res, 200, "users get successfully", users);
+    return response(res, 200, "got users successfully", users);
   } catch (error) {
     return response(res, 500, "Internal server error", error.message);
   }
