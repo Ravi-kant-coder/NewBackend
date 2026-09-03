@@ -4,7 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const connectDb = require("./config/db");
 require("dotenv").config();
-
+const subscriptionRoute = require("./routes/subscriptionRoute");
 const authMiddleware = require("./middleware/authMiddleware");
 const authRoute = require("./routes/authRoute");
 const postRoute = require("./routes/postRoute");
@@ -40,6 +40,7 @@ app.use("/candidates", authMiddleware, jobRoute);
 app.use("/students", authMiddleware, schoolRoute);
 app.use("/youtube", youTubeSyncRoute);
 app.use("/api/blogs", blogRoute);
+app.use("/api/subscriptions", subscriptionRoute);
 
 // Admin
 app.get("/api/auth/me", authMiddleware, (req, res) => {

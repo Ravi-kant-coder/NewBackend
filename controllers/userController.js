@@ -1,4 +1,5 @@
 const User = require("../model/User");
+const Subscription = require("../model/Subscription");
 const { deleteFileFromCloudinary } = require("../config/cloudinary");
 const response = require("../utils/responceHandler");
 
@@ -398,6 +399,143 @@ const getSavedPosts = async (req, res) => {
   }
 };
 
+const getAdminUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("username email profilePicture")
+      .lean();
+
+    // const Subscription = require("../model/Subscription");
+
+    const usersWithSubscription = await Promise.all(
+      users.map(async (user) => {
+        const subscription = await Subscription.findOne({
+          userId: user._id,
+        })
+          .sort({ expiryDate: -1 })
+          .select("plan status startDate expiryDate")
+          .lean();
+
+        return {
+          ...user,
+          subscription: subscription || null,
+        };
+      }),
+    );
+
+    return response(
+      res,
+      200,
+      "Admin users fetched successfully",
+      usersWithSubscription,
+    );
+  } catch (error) {
+    console.error("Error getting admin users:", error);
+
+    return response(res, 500, "Internal server error", error.message);
+  }
+};
+
+const giveUserAccess = async (req, res) => {
+  try {
+    const { userId, plan } = req.body;
+
+    const durationMonths = {
+      "3_months": 3,
+      "6_months": 6,
+      "12_months": 12,
+    };
+
+    if (!userId || !durationMonths[plan]) {
+      return response(res, 400, "Invalid user or plan");
+    }
+
+    const startDate = new Date();
+
+    const expiryDate = new Date(startDate);
+    expiryDate.setMonth(expiryDate.getMonth() + durationMonths[plan]);
+
+    // Remove any currently active subscription first
+    await Subscription.updateMany(
+      {
+        userId,
+        status: "active",
+      },
+      {
+        $set: {
+          status: "cancelled",
+        },
+      },
+    );
+
+    const subscription = await Subscription.create({
+      userId,
+      course: "all",
+      plan,
+      status: "active",
+      startDate,
+      expiryDate,
+    });
+
+    return response(res, 200, "Course access given successfully", subscription);
+  } catch (error) {
+    console.error("Error giving user access:", error);
+
+    return response(res, 500, "Failed to give course access", error.message);
+  }
+};
+
+const removeUserAccess = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return response(res, 400, "User ID is required");
+    }
+
+    const result = await Subscription.updateMany(
+      {
+        userId,
+        status: "active",
+        expiryDate: { $gt: new Date() },
+      },
+      {
+        $set: {
+          status: "cancelled",
+        },
+      },
+    );
+
+    return response(res, 200, "Course access removed successfully", result);
+  } catch (error) {
+    console.error("Error removing user access:", error);
+
+    return response(res, 500, "Failed to remove course access", error.message);
+  }
+};
+
+const verifySpecialPagePassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return response(res, 400, "Password is required");
+    }
+
+    if (password !== process.env.SPECIAL_PAGE_PASSWORD) {
+      return response(res, 401, "Incorrect password");
+    }
+
+    return response(res, 200, "Password verified", {
+      success: true,
+    });
+  } catch (error) {
+    console.error("Error verifying special page password:", error);
+
+    return response(res, 500, "Internal server error", error.message);
+  }
+};
+
 module.exports = {
   followUser,
   unfollowUser,
@@ -411,4 +549,8 @@ module.exports = {
   deleteUserProfile,
   deleteUserCover,
   getSavedPosts,
+  getAdminUsers,
+  giveUserAccess,
+  removeUserAccess,
+  verifySpecialPagePassword,
 };

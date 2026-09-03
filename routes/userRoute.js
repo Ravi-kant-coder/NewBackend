@@ -13,6 +13,10 @@ const {
   deleteUserProfile,
   deleteUserCover,
   getSavedPosts,
+  getAdminUsers,
+  giveUserAccess,
+  removeUserAccess,
+  verifySpecialPagePassword,
 } = require("../controllers/userController");
 
 const {
@@ -65,6 +69,19 @@ router.get("/user-to-request", authMiddleware, getAllUserForRequest);
 
 //get all mutual friends
 router.get("/mutual-friends/:userId", authMiddleware, getAllMutualFriends);
+
+//get all users for admin list
+router.get("/admin-list", authMiddleware, getAdminUsers);
+
+router.post("/admin/give-access", authMiddleware, giveUserAccess);
+
+router.post("/admin/remove-access", authMiddleware, removeUserAccess);
+
+router.post(
+  "/admin/verify-password",
+  authMiddleware,
+  verifySpecialPagePassword,
+);
 
 //get all users from search
 router.get("/", authMiddleware, getAllUser);
