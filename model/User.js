@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema(
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, default: null },
+    sessionId: { type: String, default: null },
     resetPasswordToken: { type: String },
     resetPasswordExpire: { type: Date },
     profilePicture: { type: String, default: null },

@@ -128,6 +128,14 @@ const loginUser = async (req, res) => {
       return response(res, 404, "Invalid Password");
     }
 
+    // Create a new session ID for every login
+    const sessionId = crypto.randomUUID();
+
+    // Save the new session ID in MongoDB
+    user.sessionId = sessionId;
+    await user.save();
+
+    // Generate JWT containing the new session ID
     const accessToken = generateToken(user);
 
     res.cookie("auth_token", accessToken, {
