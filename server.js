@@ -14,6 +14,9 @@ const jobRoute = require("./routes/jobRoute");
 const schoolRoute = require("./routes/schoolRoute");
 const blogRoute = require("./routes/blogRoute");
 const youTubeSyncRoute = require("./routes/youTubeSyncRoute");
+const handoffRoute = require("./routes/handoffRoute");
+const handoffRedeemRoute = require("./routes/handoffRedeemRoute");
+
 const handoffTestRoute = require("./routes/handoffTest");
 const handoffVerifyTestRoute = require("./routes/handoffVerifyTest");
 
@@ -43,6 +46,9 @@ app.use("/students", authMiddleware, schoolRoute);
 app.use("/youtube", youTubeSyncRoute);
 app.use("/api/blogs", blogRoute);
 app.use("/api/subscriptions", subscriptionRoute);
+app.use("/api/handoff", handoffRedeemRoute);
+app.use("/api/handoff", authMiddleware, handoffRoute);
+
 app.use("/api/handoff-test", handoffTestRoute);
 app.use("/api/handoff-test", handoffVerifyTestRoute);
 

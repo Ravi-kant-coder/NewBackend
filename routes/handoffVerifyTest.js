@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const router = express.Router();
 
 const HandoffToken = require("../model/HandoffToken");
+const Subscription = require("../model/Subscription");
 
 router.get("/verify", async (req, res) => {
   try {
@@ -48,10 +49,24 @@ router.get("/verify", async (req, res) => {
     }
 
     // Everything looks good
+    const subscription = await Subscription.findOne({
+      userId: handoff.userId,
+      course: "all",
+      status: "active",
+      expiryDate: { $gt: new Date() },
+    });
+
+    const hasActiveSubscription = !!subscription;
+
+    // Mark the token as consumed
+    handoff.consumed = true;
+    await handoff.save();
+
     res.json({
       success: true,
       userId: handoff.userId,
-      message: "Handoff token is valid",
+      hasActiveSubscription: hasActiveSubscription,
+      message: "Handoff token redeemed successfully",
     });
   } catch (error) {
     console.error("Handoff token verification error:", error);
