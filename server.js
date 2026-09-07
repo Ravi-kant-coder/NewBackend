@@ -14,6 +14,8 @@ const jobRoute = require("./routes/jobRoute");
 const schoolRoute = require("./routes/schoolRoute");
 const blogRoute = require("./routes/blogRoute");
 const youTubeSyncRoute = require("./routes/youTubeSyncRoute");
+const handoffTestRoute = require("./routes/handoffTest");
+const handoffVerifyTestRoute = require("./routes/handoffVerifyTest");
 
 const app = express();
 
@@ -41,6 +43,8 @@ app.use("/students", authMiddleware, schoolRoute);
 app.use("/youtube", youTubeSyncRoute);
 app.use("/api/blogs", blogRoute);
 app.use("/api/subscriptions", subscriptionRoute);
+app.use("/api/handoff-test", handoffTestRoute);
+app.use("/api/handoff-test", handoffVerifyTestRoute);
 
 // Admin
 app.get("/api/auth/me", authMiddleware, (req, res) => {
