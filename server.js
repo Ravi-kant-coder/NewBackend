@@ -14,11 +14,7 @@ const jobRoute = require("./routes/jobRoute");
 const schoolRoute = require("./routes/schoolRoute");
 const blogRoute = require("./routes/blogRoute");
 const youTubeSyncRoute = require("./routes/youTubeSyncRoute");
-const handoffRoute = require("./routes/handoffRoute");
-const handoffRedeemRoute = require("./routes/handoffRedeemRoute");
-
-const handoffTestRoute = require("./routes/handoffTest");
-const handoffVerifyTestRoute = require("./routes/handoffVerifyTest");
+const coursePageRoutes = require("./routes/coursePageRoutes");
 
 const app = express();
 
@@ -26,12 +22,23 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-const corsOptions = {
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
-};
+const allowedOrigins = [
+  "https://nihongomax.vercel.app",
+  "http://localhost:3000",
+];
 
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  }),
+);
 
 connectDb();
 
@@ -46,11 +53,7 @@ app.use("/students", authMiddleware, schoolRoute);
 app.use("/youtube", youTubeSyncRoute);
 app.use("/api/blogs", blogRoute);
 app.use("/api/subscriptions", subscriptionRoute);
-app.use("/api/handoff", handoffRedeemRoute);
-app.use("/api/handoff", authMiddleware, handoffRoute);
-
-app.use("/api/handoff-test", handoffTestRoute);
-app.use("/api/handoff-test", handoffVerifyTestRoute);
+app.use("/api/course-pages", coursePageRoutes);
 
 // Admin
 app.get("/api/auth/me", authMiddleware, (req, res) => {
