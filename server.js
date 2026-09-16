@@ -15,12 +15,16 @@ const schoolRoute = require("./routes/schoolRoute");
 const blogRoute = require("./routes/blogRoute");
 const youTubeSyncRoute = require("./routes/youTubeSyncRoute");
 const coursePageRoutes = require("./routes/coursePageRoutes");
+const passport = require("./controllers/googleController");
+const helmet = require("helmet");
 
 const app = express();
 
 app.set("trust proxy", 1);
+app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
+app.use(passport.initialize());
 
 const allowedOrigins = [
   "https://nihongomax.vercel.app",

@@ -84,10 +84,11 @@ const registerUser = async (req, res) => {
     const newUser = new User({
       username,
       email,
-      password, // password will be hashed in usermodel
+      password,
       profilePicture,
       dpPublicId,
       dpType,
+      sessionId: crypto.randomUUID(),
     });
 
     await newUser.save();

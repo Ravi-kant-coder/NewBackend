@@ -1,6 +1,7 @@
 const passport = require("passport");
 const User = require("../model/User");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const crypto = require("crypto");
 require("dotenv").config();
 
 passport.use(
@@ -12,29 +13,47 @@ passport.use(
       passReqToCallback: true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
-      const { emails, displayName, photos } = profile;
-      console.log(profile);
       try {
-        let user = await User.findOne({ email: emails[0].value });
+        const email = profile.emails?.[0]?.value;
+        const displayName = profile.displayName;
+        const profilePicture = profile.photos?.[0]?.value;
+
+        if (!email) {
+          return done(
+            new Error("Google account did not provide an email address."),
+          );
+        }
+
+        let user = await User.findOne({ email });
+
         if (user) {
-          if (!user.profilePicture) {
-            user.profilePicture = photos[0]?.value;
-            await user.save();
+          if (!user.profilePicture && profilePicture) {
+            user.profilePicture = profilePicture;
           }
+
+          // Every Google login creates a new active session.
+          user.sessionId = crypto.randomUUID();
+
+          await user.save();
+
           return done(null, user);
         }
 
-        //if user not found create new one
+        // Create a new Nihongomax account for this Google user.
         user = await User.create({
           username: displayName,
-          email: emails[0]?.value,
-          profilePicture: photos[0]?.value,
+          email,
+          profilePicture,
+          sessionId: crypto.randomUUID(),
         });
-        done(null, user);
+
+        return done(null, user);
       } catch (error) {
-        done(error);
+        console.error("Google authentication error:", error);
+        return done(error);
       }
-    }
-  )
+    },
+  ),
 );
+
 module.exports = passport;
