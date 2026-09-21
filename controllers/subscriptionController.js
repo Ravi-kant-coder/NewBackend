@@ -26,13 +26,34 @@ const getSubscriptionStatus = async (req, res) => {
 
     const subscription = await Subscription.findOne({
       userId,
-      status: "active",
-      expiryDate: { $gt: new Date() },
-    }).sort({ expiryDate: -1 });
+    });
 
     if (!subscription) {
+      return response(res, 200, "No subscription found", {
+        isSubscribed: false,
+      });
+    }
+
+    // If the subscription has passed its expiry date,
+    // keep the document but update its current status.
+    if (
+      subscription.status === "active" &&
+      subscription.expiryDate &&
+      subscription.expiryDate <= new Date()
+    ) {
+      subscription.status = "expired";
+      await subscription.save();
+    }
+
+    const isSubscribed =
+      subscription.status === "active" &&
+      subscription.expiryDate &&
+      subscription.expiryDate > new Date();
+
+    if (!isSubscribed) {
       return response(res, 200, "No active subscription", {
         isSubscribed: false,
+        status: subscription.status,
       });
     }
 
@@ -71,8 +92,6 @@ const createRazorpayOrder = async (req, res) => {
         plan,
       },
     });
-
-    console.log("Razorpay TEST order created:", order);
 
     return response(res, 200, "Razorpay order created successfully", {
       order,
@@ -113,8 +132,6 @@ const verifyRazorpayPayment = async (req, res) => {
     // Get the payment details directly from Razorpay
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
 
-    console.log("Razorpay payment details:", payment);
-
     // Payment must actually be captured
     if (payment.status !== "captured") {
       return response(
@@ -154,37 +171,40 @@ const verifyRazorpayPayment = async (req, res) => {
       );
     }
 
-    // Prevent the same payment from creating multiple subscriptions
-    const existingSubscription = await Subscription.findOne({
+    // Prevent the same payment from being processed twice
+    const existingPayment = await Subscription.findOne({
       razorpayPaymentId: razorpay_payment_id,
     });
 
-    if (existingSubscription) {
-      return response(
-        res,
-        200,
-        "Payment already verified",
-        existingSubscription,
-      );
+    if (existingPayment) {
+      return response(res, 200, "Payment already verified", existingPayment);
     }
 
-    // Payment is genuine — create the subscription
     const startDate = new Date();
 
     const expiryDate = new Date(startDate);
     expiryDate.setMonth(expiryDate.getMonth() + selectedPlan.durationMonths);
 
-    const subscription = await Subscription.create({
-      userId,
-      course: "all",
-      plan,
-      status: "active",
-      startDate,
-      expiryDate,
-      razorpayOrderId: razorpay_order_id,
-      razorpayPaymentId: razorpay_payment_id,
-      razorpaySignature: razorpay_signature,
-    });
+    const subscription = await Subscription.findOneAndUpdate(
+      { userId },
+      {
+        $set: {
+          course: "all",
+          plan,
+          status: "active",
+          startDate,
+          expiryDate,
+          razorpayOrderId: razorpay_order_id,
+          razorpayPaymentId: razorpay_payment_id,
+          razorpaySignature: razorpay_signature,
+        },
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      },
+    );
 
     return response(
       res,
@@ -203,6 +223,7 @@ const verifyRazorpayPayment = async (req, res) => {
     );
   }
 };
+
 module.exports = {
   getSubscriptionStatus,
   createRazorpayOrder,

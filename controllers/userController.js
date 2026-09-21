@@ -405,14 +405,11 @@ const getAdminUsers = async (req, res) => {
       .select("username email profilePicture")
       .lean();
 
-    // const Subscription = require("../model/Subscription");
-
     const usersWithSubscription = await Promise.all(
       users.map(async (user) => {
         const subscription = await Subscription.findOne({
           userId: user._id,
         })
-          .sort({ expiryDate: -1 })
           .select("plan status startDate expiryDate")
           .lean();
 
@@ -455,27 +452,30 @@ const giveUserAccess = async (req, res) => {
     const expiryDate = new Date(startDate);
     expiryDate.setMonth(expiryDate.getMonth() + durationMonths[plan]);
 
-    // Remove any currently active subscription first
-    await Subscription.updateMany(
-      {
-        userId,
-        status: "active",
-      },
+    // Update the user's existing subscription document.
+    // If the user has never had a subscription, create the one document.
+    const subscription = await Subscription.findOneAndUpdate(
+      { userId },
       {
         $set: {
-          status: "cancelled",
+          course: "all",
+          plan,
+          status: "active",
+          startDate,
+          expiryDate,
+
+          // Admin-granted access is not a Razorpay payment.
+          razorpayOrderId: null,
+          razorpayPaymentId: null,
+          razorpaySignature: null,
         },
       },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+      },
     );
-
-    const subscription = await Subscription.create({
-      userId,
-      course: "all",
-      plan,
-      status: "active",
-      startDate,
-      expiryDate,
-    });
 
     return response(res, 200, "Course access given successfully", subscription);
   } catch (error) {
@@ -493,20 +493,28 @@ const removeUserAccess = async (req, res) => {
       return response(res, 400, "User ID is required");
     }
 
-    const result = await Subscription.updateMany(
-      {
-        userId,
-        status: "active",
-        expiryDate: { $gt: new Date() },
-      },
+    const subscription = await Subscription.findOneAndUpdate(
+      { userId },
       {
         $set: {
           status: "cancelled",
         },
       },
+      {
+        new: true,
+      },
     );
 
-    return response(res, 200, "Course access removed successfully", result);
+    if (!subscription) {
+      return response(res, 404, "No subscription found for this user");
+    }
+
+    return response(
+      res,
+      200,
+      "Course access removed successfully",
+      subscription,
+    );
   } catch (error) {
     console.error("Error removing user access:", error);
 
