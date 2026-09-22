@@ -887,3 +887,5 @@ runMigration().catch(async (error) => {
 
   process.exit(1);
 });
+
+// node importCoursePagesToMongo.js
