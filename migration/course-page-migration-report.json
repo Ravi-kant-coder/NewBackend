@@ -1,0 +1,57 @@
+{
+  "startedAt": "2026-09-23T06:44:38.814Z",
+  "parserVersion": "3.0",
+  "sourceDirectory": "D:\\Coding\\Firebase\\backend\\migration\\source",
+  "totalFiles": 4,
+  "processed": 4,
+  "imported": 0,
+  "updated": 4,
+  "failed": 0,
+  "warnings": 8,
+  "results": [
+    {
+      "filename": "business-english-adv-classes.php",
+      "sourceUrl": "https://www.onlinejapaneseclasses.com/business-english-adv-classes.php",
+      "status": "UPDATED",
+      "itemCount": 23,
+      "warnings": [
+        "No .postblock elements found; using generic page structure.",
+        "Detected 28 link element(s), but only 22 structured link item(s) were extracted. Review this page."
+      ]
+    },
+    {
+      "filename": "business-english-basic-classes.php",
+      "sourceUrl": "https://www.onlinejapaneseclasses.com/business-english-basic-classes.php",
+      "status": "UPDATED",
+      "itemCount": 23,
+      "warnings": [
+        "No .postblock elements found; using generic page structure.",
+        "Detected 28 link element(s), but only 22 structured link item(s) were extracted. Review this page."
+      ]
+    },
+    {
+      "filename": "business-english-inter-classes.php",
+      "sourceUrl": "https://www.onlinejapaneseclasses.com/business-english-inter-classes.php",
+      "status": "UPDATED",
+      "itemCount": 23,
+      "warnings": [
+        "No .postblock elements found; using generic page structure.",
+        "Detected 28 link element(s), but only 22 structured link item(s) were extracted. Review this page."
+      ]
+    },
+    {
+      "filename": "eikaiwa-classes.php",
+      "sourceUrl": "https://www.onlinejapaneseclasses.com/eikaiwa-classes.php",
+      "status": "UPDATED",
+      "itemCount": 36,
+      "warnings": [
+        "No .postblock elements found; using generic page structure.",
+        "Detected 44 link element(s), but only 35 structured link item(s) were extracted. Review this page."
+      ]
+    }
+  ],
+  "mongoDocumentCount": 4,
+  "sourceFileCount": 4,
+  "countVerification": true,
+  "finishedAt": "2026-09-23T06:44:39.393Z"
+}

@@ -1,5 +1,6 @@
 const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
+const optionalAuthMiddleware = require("../middleware/optionalAuthMiddleware");
 const { multerMiddleware } = require("../config/cloudinary");
 const {
   registerUser,
@@ -13,7 +14,8 @@ const passport = require("passport");
 const { generateToken } = require("../utils/generateToken");
 const router = express.Router();
 
-router.get("/me", authMiddleware, getMe);
+// router.get("/me", authMiddleware, getMe);
+router.get("/me", optionalAuthMiddleware, getMe);
 
 router.post(
   "/register",

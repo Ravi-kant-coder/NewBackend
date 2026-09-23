@@ -86,6 +86,7 @@ const FREE_PAGES = new Set([
   "business-english-inter-classes",
   "business-english-adv-classes",
   "hwtostdyeikawa",
+  "hwtostdybe",
 
   "be_sho_overview",
   "be_chu_overview",

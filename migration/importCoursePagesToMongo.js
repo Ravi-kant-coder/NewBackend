@@ -450,6 +450,53 @@ function findContentBlocks($, container, warnings) {
     blocks.push(wrapper);
   });
 
+  // --------------------------------------------------
+  // STANDALONE TEXT LINKS
+  // --------------------------------------------------
+  // Some catalog pages contain text links outside
+  // .postblock and without an image, for example:
+  //
+  // <a href="hwtostdybe.php">
+  //   <h1>勉強の仕方</h1>
+  // </a>
+  //
+  // These are not picked up by the image-processing
+  // loop above, so add them here.
+  //
+  // Image links are skipped because they have already
+  // been handled above.
+
+  const processedTextLinks = new Set();
+
+  container.find("a").each((_, element) => {
+    const link = $(element);
+
+    // Skip links containing images.
+    if (link.find("img").length) {
+      return;
+    }
+
+    const href = link.attr("href");
+    const text = link.text().trim();
+
+    if (!href || !text) {
+      return;
+    }
+    console.log(`TEXT LINK FOUND: "${text}" → ${href}`);
+
+    // Avoid adding the same link twice.
+    if (processedTextLinks.has(element)) {
+      return;
+    }
+
+    processedTextLinks.add(element);
+
+    const wrapper = $("<div></div>");
+    wrapper.append(link.clone());
+
+    blocks.push(wrapper);
+  });
+
   if (blocks.length) {
     return blocks;
   }
@@ -465,7 +512,33 @@ function findContentBlocks($, container, warnings) {
   });
 
   if (children.length) {
-    return children.toArray().map((element) => $(element));
+    const blocks = children.toArray().map((element) => $(element));
+
+    // Also capture standalone text links such as:
+    // <a href="hwtostdybe.php"><h1>勉強の仕方</h1></a>
+    //
+    // Do not capture links that contain images because those are
+    // already handled by the image-processing logic above.
+    container.find("a").each((_, element) => {
+      const link = $(element);
+      const href = link.attr("href");
+
+      if (!href) return;
+
+      // Image links are already handled separately.
+      if (link.find("img").length) return;
+
+      const text = link.text().trim();
+
+      if (!text) return;
+
+      const wrapper = $("<div></div>");
+      wrapper.append(link.clone());
+
+      blocks.push(wrapper);
+    });
+
+    return blocks;
   }
 
   warnings.push(
@@ -888,4 +961,4 @@ runMigration().catch(async (error) => {
   process.exit(1);
 });
 
-// node importCoursePagesToMongo.js
+// node migration/importCoursePagesToMongo.js

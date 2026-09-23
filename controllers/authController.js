@@ -226,6 +226,15 @@ const resetPassword = async (req, res) => {
 
 const getMe = async (req, res) => {
   try {
+    // Logged-out visitor
+    if (!req.user) {
+      return response(res, 200, "User is not logged in", {
+        isAuthenticated: false,
+        user: null,
+      });
+    }
+
+    // Logged-in visitor
     const user = await User.findById(req.user.userId).select(
       "username email profilePicture",
     );
@@ -234,7 +243,10 @@ const getMe = async (req, res) => {
       return response(res, 404, "User not found");
     }
 
-    return response(res, 200, "User fetched successfully", user);
+    return response(res, 200, "User fetched successfully", {
+      isAuthenticated: true,
+      user,
+    });
   } catch (error) {
     console.error(error);
     return response(res, 500, "Internal Server Error", error.message);
