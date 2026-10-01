@@ -8,9 +8,12 @@ const crypto = require("crypto");
 
 const forgotPassword = async (req, res) => {
   try {
+    console.log("1. Forgot password request received");
     const { email } = req.body;
+    console.log("2. Email received:", email);
 
     const user = await User.findOne({ email });
+    console.log("3. User lookup completed:", !!user);
 
     if (!user) {
       return res.status(200).json({
@@ -18,7 +21,7 @@ const forgotPassword = async (req, res) => {
         message: "This email doest not exist in our records.",
       });
     }
-
+    console.log("4. Generating reset token");
     // Generate token
     const resetToken = crypto.randomBytes(32).toString("hex");
 
@@ -29,29 +32,31 @@ const forgotPassword = async (req, res) => {
       .digest("hex");
 
     user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 mins
-
+    console.log("5. Saving user");
     await user.save({ validateBeforeSave: false });
-
+    console.log("6. User saved");
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
     const message = `
       You requested a password reset for nihongomax.com.
       Click the link below to reset your password: (Expires in 10 minutes)
       ${resetUrl}
-      
-    `;
 
+    `;
+    console.log("7. Calling sendEmail");
     await sendEmail({
       to: user.email,
       subject: "Password Reset Request",
       text: message,
     });
+    console.log("8. Email sent successfully");
 
     res.status(200).json({
       status: "success",
       message: "Reset link sent to your Email, which will expire in 10 mins.",
     });
   } catch (error) {
+    console.error("FORGOT PASSWORD ERROR:", error);
     res.status(500).json({
       status: "error",
       message: "Email could not be sent please try again later.",
