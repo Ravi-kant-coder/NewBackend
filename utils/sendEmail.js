@@ -8,6 +8,11 @@ const sendEmail = async ({ to, subject, text }) => {
       pass: process.env.EMAIL_PASS,
     },
   });
+  console.log("Testing SMTP connection...");
+
+  await transporter.verify();
+
+  console.log("SMTP connection verified");
 
   await transporter.sendMail({
     from: `"Nihongomax" <${process.env.EMAIL_USER}>`,
