@@ -77,7 +77,7 @@ const getAllBlogs = async (req, res) => {
   try {
     const blogs = await Blog.find({ isPublished: true })
       .select("title slug featuredImage excerpt createdAt")
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: 1, _id: 1 })
       .lean();
 
     return response(res, 200, "Blogs fetched successfully", blogs);
