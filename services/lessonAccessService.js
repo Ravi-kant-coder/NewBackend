@@ -18,22 +18,22 @@ const FREE_PAGES = new Set([
   "n4howtostudy",
   "n4overview",
   "n4class1",
-  "n4class2",
+  "n4c1getans",
 
   "n3howtostudy",
   "n3overview",
   "n3class1",
-  "n3class2",
+  "n3c1getans",
 
   "n2howtostudy",
   "n2overview",
   "n2class1",
-  "n2class2",
+  "n2c1getans",
 
   "n1howtostudy",
   "n1overview",
   "n1class1",
-  "n1class2",
+  "n1c1getans",
 
   "hiragana",
 
@@ -58,26 +58,18 @@ const FREE_PAGES = new Set([
   "super_adv_overview",
 
   "bjclass1",
-  "bjclass2",
   "bjclass11",
-  "bjclass12",
   "bjclass21",
-  "bjclass22",
   "bjclass31",
-  "bjclass32",
   "bjclass41",
-  "bjclass42",
   "bjclass51",
-  "bjclass52",
   "bjclass61",
-  "bjclass62",
 
   // Kaiwa
   "kaiwa-classes",
   "kaiwa_overview",
   "howtostudykaiwa",
   "kaiwac1",
-  "kaiwac2",
 
   // Eigo
   "aboutbe",
