@@ -19,6 +19,7 @@ const createOrUpdateUserBio = async (req, res) => {
       hometown,
       birthday,
       address,
+      messageToAll,
     } = req.body;
 
     // if bio already exists, update it
@@ -34,6 +35,7 @@ const createOrUpdateUserBio = async (req, res) => {
         hometown,
         birthday,
         address,
+        messageToAll,
       },
       { new: true, runValidators: true },
     );
@@ -51,6 +53,7 @@ const createOrUpdateUserBio = async (req, res) => {
         hometown,
         birthday,
         address,
+        messageToAll,
       });
       await bio.save();
       await User.findByIdAndUpdate(userId, { bio: bio._id });

@@ -11,6 +11,7 @@ const bioSchema = new mongoose.Schema(
     hometown: { type: String, default: null },
     birthday: { type: String, default: null },
     address: { type: String, default: null },
+    messageToAll: { type: String, default: null },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true },
