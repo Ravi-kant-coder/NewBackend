@@ -9,7 +9,10 @@ router.get("/videos", async (req, res) => {
     const limit = parseInt(req.query.limit) || 12;
     const tag = req.query.tag;
 
-    let query = { isPublished: true };
+    let query = {
+      isPublished: true,
+      isShort: false,
+    };
 
     if (tag && tag !== "All") {
       query.tags = { $regex: new RegExp(`^${tag}$`, "i") };

@@ -7,8 +7,9 @@ const VideoSchema = new mongoose.Schema(
     publishedAt: Date,
     tags: { type: [String], default: [] },
     isPublished: { type: Boolean, default: true },
+    isShort: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Videos = mongoose.model("Videos", VideoSchema);
